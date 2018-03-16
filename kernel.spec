@@ -2,7 +2,7 @@ Summary: Cobalt MIPS kernel
 Name: kernel
 Version: 2.0.34C53_SK
 %define version %{PACKAGE_VERSION}
-Release: 2
+Release: 3
 Copyright: GPL/Cobalt
 Group: Base/Kernel
 ExclusiveOS: Linux
@@ -10,10 +10,14 @@ Source: linux-2.0.34-cobalt.tar.gz
 BuildRoot: /var/tmp/kernel
 
 %changelog
+* Tue May 23 2000 Tim Hockin <thockin@cobalt.com>
+  - Fix md5sums for ISDN (as per Fritz' request)
+  - 2.0.34C53_SK-3
+
 * Mon May 08 2000 Tim Hockin <thockin@cobalt.com>
   - Turn off IPAUTOFW and IPPORTFW by default
 
-  - Build AIC7xxx driver as a 'y' not a 'm;
+  - Build AIC7xxx driver as a 'y' not a 'm';
 
 * Thu Apr  6 2000 Chris Johnson <cjohnson@cobaltnet.com>
   - Enabled IPAUTOFW and CONFIG_DLCI/CONFIG_DLCI_MODULE

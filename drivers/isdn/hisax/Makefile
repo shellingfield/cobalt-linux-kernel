@@ -165,3 +165,6 @@ CERT = $(shell md5sum -c md5sums.asc >> /dev/null;echo $$?)
 cert.o:	$(MD5FILES) md5sums.asc
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -D CERTIFICATION=$(CERT) -c -o cert.o cert.c
 
+md5sums.asc: $(MD5FILES)
+	cat $@.in > $@
+	md5sum $^ >> $@

@@ -1,0 +1,5 @@
+# This are valid md5sums for certificated HiSax driver.
+# The certification is valid only if the md5sums of all files match.
+# The certification is valid only for ELSA QuickStep cards in the moment.
+# Read ../../../Documentation/isdn/HiSax.cert for more informations.
+# 
