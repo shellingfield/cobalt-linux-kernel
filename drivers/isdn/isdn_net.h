@@ -1,8 +1,8 @@
-/* $Id: isdn_net.h,v 1.2 1997/11/29 02:01:37 davem Exp $
+/* $Id: isdn_net.h,v 1.3 1999/07/07 05:56:11 thockin Exp $
 
  * header for Linux ISDN subsystem, network related functions (linklevel).
  *
- * Copyright 1994,95,96 by Fritz Elfert (fritz@wuemaus.franken.de)
+ * Copyright 1994-1998  by Fritz Elfert (fritz@isdn4linux.de)
  * Copyright 1995,96    by Thinking Objects Software GmbH Wuerzburg
  * Copyright 1995,96    by Michael Hipp (Michael.Hipp@student.uni-tuebingen.de)
  *
@@ -21,8 +21,38 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_net.h,v $
- * Revision 1.2  1997/11/29 02:01:37  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:11  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.5.2.2  1998/11/05 22:12:09  fritz
+ * Changed mail-address.
+ *
+ * Revision 1.5.2.1  1998/10/25 15:48:29  fritz
+ * Misc bugfixes and adaptions to new HiSax
  *
  * Revision 1.5  1997/02/10 20:12:47  fritz
  * Changed interface for reporting incoming calls.
@@ -52,13 +82,13 @@ extern char *isdn_net_new(char *, struct device *);
 extern char *isdn_net_newslave(char *);
 extern int isdn_net_rm(char *);
 extern int isdn_net_rmall(void);
-extern int isdn_net_stat_callback(int, int);
+extern int isdn_net_stat_callback(int, isdn_ctrl *);
 extern int isdn_net_setcfg(isdn_net_ioctl_cfg *);
 extern int isdn_net_getcfg(isdn_net_ioctl_cfg *);
 extern int isdn_net_addphone(isdn_net_ioctl_phone *);
 extern int isdn_net_getphones(isdn_net_ioctl_phone *, char *);
 extern int isdn_net_delphone(isdn_net_ioctl_phone *);
-extern int isdn_net_find_icall(int, int, int, setup_parm);
+extern int isdn_net_find_icall(int, isdn_ctrl *, int);
 extern void isdn_net_hangup(struct device *);
 extern void isdn_net_dial(void);
 extern void isdn_net_autohup(void);

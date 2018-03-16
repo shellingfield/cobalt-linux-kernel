@@ -9,7 +9,7 @@
  * Copyright (C) 1996 Paul Mackerras (Paul.Mackerras@cs.anu.edu.au)
  * Copyright (C) 1995,1997,1998 David S. Miller (davem@caip.rutgers.edu)
  *
- * $Id: cobaltserial.c,v 1.17 1998/12/11 10:22:39 gid Exp $
+ * $Id: cobaltserial.c,v 1.20 1999/04/08 01:16:44 cjohnson Exp $
  */
 
 #include <linux/config.h>
@@ -38,6 +38,9 @@
 #include "cobaltserial.h"
 #include <linux/serial.h>
 #include <linux/serial_reg.h>
+#include <asm/cobalt.h>
+
+static int cons_out_enabled = 1;
 
 enum cobalt_scc_type {
 	COBALT_SCC_TYPE_ZILOG = 0, /* 2700 devel/alpha/beta boards */
@@ -813,27 +816,6 @@ static void zs_put_char(char ch)
 			break;
 	write_zsdata(chan, ch);
 	restore_flags(flags);
-}
-
-/* These are for receiving and sending characters under the kgdb
- * source level kernel debugger.
- */
-void putDebugChar(char kgdb_char)
-{
-	struct mac_zschannel *chan = zs_kgdbchan;
-
-	while ((read_zsreg(chan, 0) & Tx_BUF_EMP) == 0)
-		udelay(5);
-	write_zsdata(chan, kgdb_char);
-}
-
-char getDebugChar(void)
-{
-	struct mac_zschannel *chan = zs_kgdbchan;
-
-	while ((read_zsreg(chan, 0) & Rx_CH_AV) == 0)
-		udelay(5);
-	return read_zsdata(chan);
 }
 
 /*
@@ -1685,7 +1667,7 @@ int zs_open(struct tty_struct *tty, struct file * filp)
 
 static void zs_show_serial_version(void)
 {
-	char *revision = "$Revision: 1.17 $";
+	char *revision = "$Revision: 1.20 $";
 	char *version, *p;
 
 	version = strchr(revision, ' ');
@@ -1747,8 +1729,14 @@ static int rs_init_zilog(void)
 	serial_driver.subtype = SERIAL_TYPE_NORMAL;
 	serial_driver.init_termios = tty_std_termios;
 
+#if 0
+/* UNTESTED - should "just work" - cj */
+	serial_driver.init_termios.c_cflag =
+		cobalt_cons_baudbaud() | CS8 | CREAD | HUPCL | CLOCAL;
+#else
 	serial_driver.init_termios.c_cflag =
 		B115200 | CS8 | CREAD | HUPCL | CLOCAL;
+#endif
 	serial_driver.flags = TTY_DRIVER_REAL_RAW;
 	serial_driver.refcount = &serial_refcount;
 	serial_driver.table = zs_serial_table;
@@ -1856,8 +1844,6 @@ static int IRQ_timeout[16];
 static void ns16550_autoconfig(struct async_struct *info);
 static void ns16550_change_speed(struct async_struct *info);
 
-/* Detected in rs_init_16550() */
-static int ns16550_modem_attached = 0;
 
 #define C_P(card,port) (((card)<<6|(port)<<3) + 1)
 
@@ -1969,38 +1955,57 @@ static _INLINE_ void ns16550_receive_chars(struct async_struct *info,
 
 	do {
 		ch = serial_inp(info, UART_RX);
+#ifdef CONFIG_REMOTE_DEBUG
+		{
+		    static int deb_init = 0;
+		    extern void breakpoint(void);
+		    extern void set_debug_traps(void);
+
+		    if (ch == '\003') {		/* GDB's interrupt char */
+			if ( ! deb_init) {
+			    set_debug_traps();
+			    deb_init = 1;
+			}
+			breakpoint();
+			    goto ignore_char;
+		    }
+		}
+#endif
 		if (*status & info->ignore_status_mask) {
 			if (++ignored > 100)
 				break;
 			goto ignore_char;
 		}
-		if (tty->flip.count >= TTY_FLIPBUF_SIZE)
-			break;
-		tty->flip.count++;
-		if (*status & (UART_LSR_BI)) {
+		if (tty ) {
+		    if (tty->flip.count >= TTY_FLIPBUF_SIZE)
+			    break;
+		    tty->flip.count++;
+		    if (*status & (UART_LSR_BI)) {
 #ifdef SERIAL_DEBUG_INTR
-			printk("handling break....");
+			    printk("handling break....");
 #endif
-			*tty->flip.flag_buf_ptr++ = TTY_BREAK;
-			if (info->flags & ASYNC_SAK)
-				do_SAK(tty);
-		} else if (*status & UART_LSR_PE)
-			*tty->flip.flag_buf_ptr++ = TTY_PARITY;
-		else if (*status & UART_LSR_FE)
-			*tty->flip.flag_buf_ptr++ = TTY_FRAME;
-		else if (*status & UART_LSR_OE) 
-			*tty->flip.flag_buf_ptr++ = TTY_OVERRUN;
-		else
-			*tty->flip.flag_buf_ptr++ = 0;
-		*tty->flip.char_buf_ptr++ = ch;
-#ifndef CONFIG_COBALT_28
+			    *tty->flip.flag_buf_ptr++ = TTY_BREAK;
+			    if (info->flags & ASYNC_SAK)
+				    do_SAK(tty);
+		    } else if (*status & UART_LSR_PE)
+			    *tty->flip.flag_buf_ptr++ = TTY_PARITY;
+		    else if (*status & UART_LSR_FE)
+			    *tty->flip.flag_buf_ptr++ = TTY_FRAME;
+		    else if (*status & UART_LSR_OE) 
+			    *tty->flip.flag_buf_ptr++ = TTY_OVERRUN;
+		    else
+			    *tty->flip.flag_buf_ptr++ = 0;
+		    *tty->flip.char_buf_ptr++ = ch;
+		}
 		/* Serial console must wakeup sleepers on keypress_wait. */
 		wake_up(&keypress_wait);
-#endif
 	ignore_char:
-		*status = serial_inp(info, UART_LSR) & info->read_status_mask;
-	} while (*status & UART_LSR_DR);
-	queue_task_irq_off(&tty->flip.tqueue, &tq_timer);
+		*status = serial_inp(info, UART_LSR)
+			& ~(UART_LSR_TEMT|UART_LSR_THRE) ;
+	} while (*status);
+
+	if (tty)
+	    queue_task_irq_off(&tty->flip.tqueue, &tq_timer);
 #ifdef SERIAL_DEBUG_INTR
 	printk("DR...");
 #endif
@@ -2017,8 +2022,8 @@ static _INLINE_ void ns16550_transmit_chars(struct async_struct *info, int *intr
 			*intr_done = 0;
 		return;
 	}
-	if ((info->xmit_cnt <= 0) || info->tty->stopped ||
-	    info->tty->hw_stopped) {
+	if ((info->xmit_cnt <= 0) || (info->tty && (info->tty->stopped ||
+	    info->tty->hw_stopped))) {
 		info->IER &= ~UART_IER_THRI;
 		serial_out(info, UART_IER, info->IER);
 		return;
@@ -2082,7 +2087,7 @@ static _INLINE_ void ns16550_check_modem_status(struct async_struct *info)
 					   &tq_scheduler);
 		}
 	}
-	if (info->flags & ASYNC_CTS_FLOW) {
+	if (info->tty && (info->flags & ASYNC_CTS_FLOW)) {
 		if (info->tty->hw_stopped) {
 			if (status & UART_MSR_CTS) {
 #if (defined(SERIAL_DEBUG_INTR) || defined(SERIAL_DEBUG_FLOW))
@@ -2136,11 +2141,11 @@ static void ns16550_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 
 		info->last_active = jiffies;
 
-		status = serial_inp(info, UART_LSR) & info->read_status_mask;
+		status = serial_inp(info, UART_LSR);
 #ifdef SERIAL_DEBUG_INTR
 		printk("status = %x...", status);
 #endif
-		if (status & UART_LSR_DR)
+		if (status & ~(UART_LSR_THRE|UART_LSR_TEMT))
 			ns16550_receive_chars(info, &status);
 		ns16550_check_modem_status(info);
 		if (status & UART_LSR_THRE)
@@ -2178,15 +2183,15 @@ static void ns16550_interrupt_single(int irq, void *dev_id, struct pt_regs * reg
 #endif
 	
 	info = IRQ_ports[irq];
-	if (!info || !info->tty)
+	if ( ! info)
 		return;
 
 	do {
-		status = serial_inp(info, UART_LSR) & info->read_status_mask;
+		status = serial_inp(info, UART_LSR);
 #ifdef SERIAL_DEBUG_INTR
 		printk("status = %x...", status);
 #endif
-		if (status & UART_LSR_DR)
+		if (status & ~(UART_LSR_THRE|UART_LSR_TEMT))
 			ns16550_receive_chars(info, &status);
 		ns16550_check_modem_status(info);
 		if (status & UART_LSR_THRE)
@@ -2698,8 +2703,8 @@ static void ns16550_console_print(const char *p)
 	unsigned long port = 0x1c800000;
 	char c, lsr, ier;
 
-	/* If modem is attached, don't do anything. */
-	if (ns16550_modem_attached != 0)
+	/* If we were told to be quiet, just return */
+	if ( ! cons_out_enabled)
 		return;
 
 	ier = inb(port + UART_IER);
@@ -2749,6 +2754,7 @@ static int ns16550_write(struct tty_struct * tty, int from_user,
 	if (from_user)
 		down(&tmp_buf_sem);
 	save_flags(flags);
+
 	while (1) {
 		cli();		
 		c = MIN(count, MIN(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
@@ -2772,6 +2778,7 @@ static int ns16550_write(struct tty_struct * tty, int from_user,
 	}
 	if (from_user)
 		up(&tmp_buf_sem);
+
 	if (info->xmit_cnt && !tty->stopped && !tty->hw_stopped &&
 	    !(info->IER & UART_IER_THRI)) {
 		info->IER |= UART_IER_THRI;
@@ -2834,9 +2841,9 @@ static void ns16550_throttle(struct tty_struct * tty)
 	if (I_IXOFF(tty))
 		info->x_char = STOP_CHAR(tty);
 
+	cli();
 	info->MCR &= ~UART_MCR_RTS;
 	info->MCR_noint &= ~UART_MCR_RTS;
-	cli();
 	serial_out(info, UART_MCR, info->MCR);
 	sti();
 }
@@ -2860,9 +2867,9 @@ static void ns16550_unthrottle(struct tty_struct * tty)
 		else
 			info->x_char = START_CHAR(tty);
 	}
+	cli();
 	info->MCR |= UART_MCR_RTS;
 	info->MCR_noint |= UART_MCR_RTS;
-	cli();
 	serial_out(info, UART_MCR, info->MCR);
 	sti();
 }
@@ -3414,13 +3421,6 @@ void ns16550_hangup(struct tty_struct *tty)
 	if (ns16550_serial_paranoia_check(info, tty->device, "rs_hangup"))
 		return;
 	
-#ifndef CONFIG_COBALT_28
-	/* When acting as a console, we don't want to shutdown the
-	 * line, because that causes userland shutdown to hang for
-	 * example.  -DaveM
-	 */
-	return;
-#else
 	ns16550_flush_buffer(tty);
 	ns16550_shutdown(info);
 	info->event = 0;
@@ -3428,7 +3428,6 @@ void ns16550_hangup(struct tty_struct *tty)
 	info->flags &= ~(ASYNC_NORMAL_ACTIVE|ASYNC_CALLOUT_ACTIVE);
 	info->tty = 0;
 	wake_up_interruptible(&info->open_wait);
-#endif
 }
 
 static int ns16550_block_til_ready(struct tty_struct *tty, struct file * filp,
@@ -3764,17 +3763,11 @@ static int rs_init_16550(void)
 	serial_driver.type = TTY_DRIVER_TYPE_SERIAL;
 	serial_driver.subtype = SERIAL_TYPE_NORMAL;
 	serial_driver.init_termios = tty_std_termios;
+
+	cons_out_enabled = cobalt_cons_koutok();
+
 	serial_driver.init_termios.c_cflag =
-#ifndef BOOTLOADER
-#ifdef DEBUG_LOADER
-		/* B9600 | CS8 | CREAD | HUPCL | CLOCAL; */
-		B115200 | CS8 | CREAD | HUPCL | CLOCAL;
-#else
-		B9600 | CS8 | CREAD | HUPCL | CLOCAL;
-#endif
-#else	/* BOOTLOADER - 115200 always */
-		B115200 | CS8 | CREAD | HUPCL | CLOCAL;
-#endif
+		cobalt_cons_baudbaud() | CS8 | CREAD | HUPCL | CLOCAL;
 	
 	serial_driver.flags = TTY_DRIVER_REAL_RAW;
 	serial_driver.refcount = &serial_refcount;
@@ -4155,7 +4148,15 @@ static void cons_hook_zilog(int chip, int out, int channel)
 	zs_consinfo = &zs_soft[channel];
 	zs_conschan = zs_consinfo->zs_channel;
 	zs_consinfo->clk_divisor = 16;
+
+#if 0
+/* UNTESTED - should "just work" - cj */
+	cons_out_enabled = cobalt_cons_koutok();
+
+	zs_consinfo->zs_baud = cobalt_cons_baudint();
+#else
 	zs_consinfo->zs_baud = 115200;
+#endif
 	zs_consinfo->is_cons = 1;
 
 	memcpy(zs_consinfo->curregs, zs_cons_init_regs, sizeof(zs_cons_init_regs));
@@ -4185,19 +4186,9 @@ static void cons_hook_16550(int chip, int out, int channel)
 
 	outb(0x00, port + UART_DLM);
 
-#ifndef BOOTLOADER
-#ifndef DEBUG_LOADER
-	/* 9600 baud -- default; for real kernel that boots from disk */
-	outb(0x78, port + UART_DLL);
-#else
-	/* 115200 for debugging.. to match ramcode + rom kernel 
-	   debug output speeds */
-	outb(0x0a, port + UART_DLL);
-#endif
-#else
-	/* BOOTLOADER - rom kernel, 115200 */
-	outb(0x0a, port + UART_DLL);
-#endif
+	cons_out_enabled = cobalt_cons_koutok();
+
+	outb(BASE_BAUD / cobalt_cons_baudint(), port + UART_DLL);
 
 	outb(0x03, port + UART_LCR);
 
@@ -4205,24 +4196,6 @@ static void cons_hook_16550(int chip, int out, int channel)
 	comstat = inb(port + UART_RX);
 	outb(0x00, port + UART_IER);
 
-	/* See if a modem is attached and on. */
-#if 0
-	{
-		int tmp = inb(port + UART_MSR);
-
-		/* If we have "Clear To Send" clear, we
-		 * have a modem attached and it is on.
-		 */
-		if ((tmp & UART_MSR_CTS) == 0)
-			ns16550_modem_attached = 1;
-	}
-#endif
-#ifdef CONFIG_COBALT_28
-	/* Gross, but until I can test this modem detection
-	 * code some more, we disable console output entirely.
-	 */
-	ns16550_modem_attached = 1;
-#endif
 	register_console(ns16550_console_print);
 	printk("ns16550: console I/O\n");
 }
@@ -4310,26 +4283,50 @@ void rs_cons_hook(int chip, int out, int channel)
 	}
 }
 
-/* This is called at boot time to prime the kgdb serial debugging
- * serial line.  The 'tty_num' argument is 0 for /dev/ttyS0 and 1
- * for /dev/ttyS1 which is determined in setup_arch() from the
- * boot command line flags.
+/* These are for receiving and sending characters under the kgdb
+ * source level kernel debugger.
  */
-void
-rs_kgdb_hook(int tty_num)
+void putDebugChar(char kgdb_char)
 {
-	/* Don't do this on anything other than a Zilog. */
-	if (cobalt_sccs_present() != COBALT_SCC_TYPE_ZILOG)
-		return;
-	if (zs_chain == 0)
-		zs_probe_sccs();
-	zs_kgdbchan = zs_soft[tty_num].zs_channel;
-	zs_soft[tty_num].clk_divisor = 16;
-	zs_soft[tty_num].zs_baud = get_zsbaud(&zs_soft[tty_num]);
-	zs_soft[tty_num].kgdb_channel = 1;     /* This runs kgdb */
-	zs_soft[tty_num ^ 1].kgdb_channel = 0; /* This does not */
-	/* Turn on transmitter/receiver at 8-bits/char */
-	zs_kgdb_chaninit(&zs_soft[tty_num], 0, 9600);
-	ZS_CLEARERR(zs_kgdbchan);
-	ZS_CLEARFIFO(zs_kgdbchan);
+	switch (cobalt_sccs_present()) {
+	case COBALT_SCC_TYPE_16550:
+	    {
+		unsigned long port = 0x1c800000;
+		ns16550_cons_put_char(kgdb_char, port);
+	    }
+	    break;
+	case COBALT_SCC_TYPE_ZILOG:
+	    {
+		struct mac_zschannel *chan = zs_kgdbchan;
+
+		while ((read_zsreg(chan, 0) & Tx_BUF_EMP) == 0)
+			udelay(5);
+		write_zsdata(chan, kgdb_char);
+	    }
+	    break;
+	}
+}
+
+char getDebugChar(void)
+{
+	switch (cobalt_sccs_present()) {
+	case COBALT_SCC_TYPE_16550:
+	    {
+		unsigned long port = 0x1c800000;
+
+		while ((inb(port + UART_LSR) & 1) == 0)
+		    udelay(1);
+		return inb(port + UART_RX);
+	    }
+	    break;
+	case COBALT_SCC_TYPE_ZILOG:
+	    {
+		struct mac_zschannel *chan = zs_kgdbchan;
+
+		while ((read_zsreg(chan, 0) & Rx_CH_AV) == 0)
+		    udelay(5);
+		return read_zsdata(chan);
+	    }
+	    break;
+	}
 }

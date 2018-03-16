@@ -136,7 +136,7 @@ ethif_probe(struct device *dev)
 #ifdef CONFIG_YELLOWFIN
 	&& yellowfin_probe(dev)
 #endif
-#if defined(CONFIG_COBALT_TULIP) || defined(CONFIG_COBALT_TULIP_RAQ)
+#if defined(CONFIG_COBALT_TULIP)
 	&& tulip_probe(dev)
 #endif
 #if defined(CONFIG_COBALT_3COM)

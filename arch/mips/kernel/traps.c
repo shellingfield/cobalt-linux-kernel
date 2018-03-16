@@ -8,7 +8,7 @@
  * Copyright 1994, 1995, 1996, 1997 by Ralf Baechle
  * Modified for R3000 by Paul M. Antoine, 1995, 1996
  *
- * $Id: traps.c,v 1.5 1998/09/08 12:06:38 davem Exp $
+ * $Id: traps.c,v 1.6 1999/06/16 03:24:28 cjohnson Exp $
  */
 #include <linux/config.h>
 #include <linux/mm.h>
@@ -496,6 +496,9 @@ void trap_init(void)
 		 */
 		set_except_vector(6, handle_ibe);
 		set_except_vector(7, handle_dbe);
+
+		ibe_board_handler = default_be_board_handler;
+		dbe_board_handler = default_be_board_handler;
 
 		set_except_vector(8, handle_sys);
 		set_except_vector(9, handle_bp);

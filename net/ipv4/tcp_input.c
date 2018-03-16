@@ -36,12 +36,28 @@
  *              Elliot Poger    :       Added support for SO_BINDTODEVICE.
  *	Willy Konynenberg	:	Transparent proxy adapted to new
  *					socket hash code.
+ *      J Hadi Salim            :       We assumed that some idiot wasnt going
+ *      Alan Cox                        to idly redefine bits of ToS in an
+ *                                      experimental protocol for other things
+ *                                      (ECN) - wrong!. Mask the bits off. Note
+ *                                      masking the bits if they dont use ECN
+ *                                      then use it for ToS is even more
+ *                                      broken.
+ *                                      </RANT>
+ *      George Baeslack         :       SIGIO delivery on accept() bug that
+ *                                      affected sun jdk.
  */
 
 #include <linux/config.h>
 #include <linux/types.h>
 #include <linux/random.h>
 #include <net/tcp.h>
+
+/*
+ *      Do we assume the IP ToS is entirely for its intended purpose
+ */
+
+#define TOS_VALID_MASK(x)               ((x)&0x3F)
 
 /*
  *	Policy code extracted so it's now separate
@@ -530,7 +546,10 @@ static void tcp_conn_request(struct sock *sk, struct sk_buff *skb,
 	/* If the socket is dead, don't accept the connection. */
 	if (!sk->dead) 
 	{
-  		sk->data_ready(sk,0);
+		/*
+		 * This must wait for 3 way completion.
+  		 * sk->data_ready(sk,0);
+		 */
 	}
 	else 
 	{
@@ -758,13 +777,14 @@ static void tcp_conn_request(struct sock *sk, struct sk_buff *skb,
 	newsk->acked_seq = skb->seq + 1;
 	newsk->copied_seq = skb->seq + 1;
 	newsk->socket = NULL;
+	newsk->listening = sk;
 
 	/*
 	 *	Grab the ttl and tos values and use them 
 	 */
 
 	newsk->ip_ttl=sk->ip_ttl;
-	newsk->ip_tos=skb->ip_hdr->tos;
+	newsk->ip_tos=TOS_VALID_MASK(skb->ip_hdr->tos);
 
 	/*
 	 *	Use 512 or whatever user asked for 
@@ -872,7 +892,7 @@ static int tcp_conn_request_fake(struct sock *sk, struct sk_buff *skb,
 	/* If the socket is dead, don't accept the connection. */
 	if (!sk->dead) 
 	{
-  		sk->data_ready(sk,0);
+  		/*sk->data_ready(sk,0); */
 	}
 	else 
 	{
@@ -1018,13 +1038,14 @@ static int tcp_conn_request_fake(struct sock *sk, struct sk_buff *skb,
 	newsk->acked_seq = skb->seq;
 	newsk->copied_seq = skb->seq;
 	newsk->socket = NULL;
+	newsk->listening = sk;
 
 	/*
 	 *	Grab the ttl and tos values and use them 
 	 */
 
 	newsk->ip_ttl=sk->ip_ttl;
-	newsk->ip_tos=skb->ip_hdr->tos;
+	newsk->ip_tos=TOS_VALID_MASK(skb->ip_hdr->tos);
 
 	rt = ip_rt_route(newsk->opt && newsk->opt->srr ? newsk->opt->faddr : saddr, 0,
 			 sk->bound_device);
@@ -1650,6 +1671,19 @@ static int tcp_ack(struct sock *sk, struct tcphdr *th, u32 ack, int len)
 	{
 		tcp_set_state(sk, TCP_ESTABLISHED);
 
+		/*
+		 *      We have a listening socket owning us. Wake it for
+		 *      the accept.
+		 */
+
+		if ( sk->listening )
+		{
+			/* The listener may be sk->dead. Dont worry
+			   data_ready traps this */
+			sk->data_ready(sk->listening,0);
+			sk->listening = NULL;
+		}
+
 		/* Must check for peer advertising zero sized window
 		 * or else we get a sk->{mtu,mss} of zero and thus bomb out
 		 * in tcp_do_sendmsg. -DaveM
@@ -1725,7 +1759,7 @@ uninteresting_ack:
 		if(sk->ip_xmit_timeout==TIME_KEEPOPEN)
 			tcp_reset_xmit_timer(sk, TIME_KEEPOPEN, TCP_TIMEOUT_LEN);
 	}
-	return 0;
+	return 1;
 }
 
 
@@ -1891,8 +1925,6 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 
 
 	if (!after(skb->seq, ack_seq)) {
-		int ofo_data_exists = 0;
-
 		if (after(skb->end_seq, ack_seq)) {
 			/* the packet straddles our window end */
 			struct sk_buff_head * list = &sk->receive_queue;
@@ -1905,10 +1937,8 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 			 */
 			next = skb->next;
 			while (next != (struct sk_buff *) list) {
-				if (after(next->seq, ack_seq)) {
-					ofo_data_exists = 1;
+				if (after(next->seq, ack_seq))
 					break;
-				}
 				if (after(next->end_seq, ack_seq))
 					ack_seq = tcp_queue_ack(next, sk);
 				next = next->next;
@@ -1933,12 +1963,8 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 		 * Delay the ack if possible.  Send ack's to
 		 * fin frames immediately as there shouldn't be
 		 * anything more to come.
-		 *
-		 * ACK immediately if we still have any out of
-		 * order data.  This is because we desire "maximum
-		 * feedback during loss".  --DaveM
 		 */
-		if (!sk->delay_acks || th->fin || ofo_data_exists) {
+		if (!sk->delay_acks || th->fin) {
 			tcp_send_ack(sk);
 		} else {
 			/*
@@ -2396,6 +2422,14 @@ retry_search:
 	 
 		if(sk->state==TCP_LISTEN)
 		{
+			/* Don't start connections with illegal address
+			   ranges. Trying to talk TCP to a broken dhcp host
+			   isnt good on a lan with broken SunOS 4.x boxes
+			   who think its a broadcast */
+
+			if ((saddr | daddr) == 0)
+				goto discard_it;
+
 			if (th->ack) {	/* These use the socket TOS.. might want to be the received TOS */
 #ifdef CONFIG_SYN_COOKIES
 				if (!th->syn && !th->rst) {

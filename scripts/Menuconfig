@@ -41,7 +41,6 @@
 #
 set -h +o posix
 
-
 #
 # If you prefer all kernel options listed in a single menu rather than
 # the standard menu hierarchy, set SINGLE_MENU_MODE to "TRUE" in your
@@ -547,7 +546,6 @@ function parser(ifile,menu) {
 				"default=$1\n"\
 				"menu_name %s\n",\
 				 menu_no, $0) >"MCmenu"menu_no
-
 			parser(ifile, "MCmenu"menu_no)
 		}
 		else if ($1 ~ "endmenu") {

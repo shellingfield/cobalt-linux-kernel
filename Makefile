@@ -1,6 +1,9 @@
 VERSION = 2
 PATCHLEVEL = 0
 SUBLEVEL = 34
+EXTRAVERSION = C49_SK
+
+KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
 
 ARCH = mips
 
@@ -178,6 +181,11 @@ vmlinux: $(CONFIGURATION) init/main.o init/version.o linuxsubdirs
 		$(LIBS) -o vmlinux
 	$(NM) vmlinux | grep -v '\(compiled\)\|\(\.o$$\)\|\( a \)' | sort > System.map
 
+cobalt:
+	make vmlinux
+	strip vmlinux
+	gzip -f -9 vmlinux
+
 symlinks:
 	rm -f include/asm
 	( cd include ; ln -sf asm-$(ARCH) asm)
@@ -232,7 +240,7 @@ include/linux/compile.h: $(CONFIGURATION) include/linux/version.h newversion
 	@mv -f .ver $@
 
 include/linux/version.h: ./Makefile
-	@echo \#define UTS_RELEASE \"$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)\" > .ver
+	@echo \#define UTS_RELEASE \"$(KERNELRELEASE)\" > .ver
 	@echo \#define LINUX_VERSION_CODE `expr $(VERSION) \\* 65536 + $(PATCHLEVEL) \\* 256 + $(SUBLEVEL)` >> .ver
 	@mv -f .ver $@
 
@@ -263,7 +271,7 @@ drivers: dummy
 net: dummy
 	$(MAKE) linuxsubdirs SUBDIRS=net
 
-MODFLAGS = -DMODULE
+MODFLAGS += -DMODULE
 ifdef CONFIG_MODULES
 ifdef CONFIG_MODVERSIONS
 MODFLAGS += -DMODVERSIONS -include $(HPATH)/linux/modversions.h
@@ -277,7 +285,7 @@ modules: include/linux/version.h
 
 modules_install:
 	@( \
-	MODLIB=/lib/modules/$(VERSION).$(PATCHLEVEL).$(SUBLEVEL); \
+	MODLIB=$(MODROOT)/lib/modules/$(KERNELRELEASE); \
 	cd modules; \
 	MODULES=""; \
 	inst_mod() { These="`cat $$1`"; MODULES="$$MODULES $$These"; \
@@ -314,7 +322,7 @@ clean:	archclean
 	rm -f kernel/ksyms.lst include/linux/compile.h
 	rm -f core `find . -name '*.[oas]' ! -regex '.*lxdialog/.*' -print`
 	rm -f core `find . -type f -name 'core' -print`
-	rm -f vmlinux System.map
+	rm -f vmlinux vmlinux.gz System.map
 	rm -f .tmp* drivers/sound/configure
 	rm -f `find modules/ -type f -maxdepth 1 -print`
 	rm -f submenu*

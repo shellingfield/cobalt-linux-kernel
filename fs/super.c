@@ -32,6 +32,10 @@
 #include <linux/mm.h>
 #include <linux/fd.h>
 
+#ifdef BOOTLOADER
+#include <linux/delay.h>
+#endif
+
 #include <asm/system.h>
 #include <asm/segment.h>
 #include <asm/bitops.h>
@@ -1041,12 +1045,44 @@ static void do_mount_root(void)
 	}
 
 #ifdef BOOTLOADER
-	printk("VFS: BOOTLOADER: Unable to mount root fs on %s, "
+	printk("BOOTLOADER kernel: Unable to mount root fs on %s, "
 		"setting disk_error (@ %p) to 1 "
 		"and jumping back to RAMCODE\n",
 		kdevname(ROOT_DEV), kDiskerrorAddr);
 
+#if 0
+/* TJS... Why sleep? */
+	/* just a hack - thought it might get let the disk settle down 
+		or something.  -gid */
+	{ 
+		unsigned long x = jiffies;
+		printk("BOOTLOADER kernel: sleeping for a while first though\n");
+		while (jiffies < x + 25 * HZ) {
+			printk(".");
+			udelay(50000);
+		}
+		printk("\nBOOTLOADER kernel: done\n");
+	}
+#endif
+		
+
 	* ((int *) kDiskerrorAddr) = 1;
+	// TJS
+        set_cp0_status(ST0_IM, 0);
+        cli();
+
+	/* I think the 2 lines above are the key.. they've been present in 
+		init/main.c forever and I just neglected to copy them over.
+
+		I can't think of why calling flush_cache_all would be 
+		required.   It had been commented out of init/main.c and
+		that doesn't seem to prevent the bootloader kernel from
+		working under normal condititions - i.e. when it can mount
+		root and read in vmlinux.gz.  -gid */
+		
+
+  	flush_cache_all();
+
 	(* ((( void (*)(void)) (*(unsigned long *)kRAMCodeAddr))))();
 #endif
 

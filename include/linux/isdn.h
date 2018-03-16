@@ -1,8 +1,8 @@
-/* $Id: isdn.h,v 1.2 1997/11/29 02:02:00 davem Exp $
+/* $Id: isdn.h,v 1.3 1999/07/07 05:56:13 thockin Exp $
  *
  * Main header for the Linux ISDN subsystem (linklevel).
  *
- * Copyright 1994,95,96 by Fritz Elfert (fritz@wuemaus.franken.de)
+ * Copyright 1994-1998  by Fritz Elfert (fritz@isdn4linux.de)
  * Copyright 1995,96    by Thinking Objects Software GmbH Wuerzburg
  * Copyright 1995,96    by Michael Hipp (Michael.Hipp@student.uni-tuebingen.de)
  * 
@@ -21,11 +21,99 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  * $Log: isdn.h,v $
- * Revision 1.2  1997/11/29 02:02:00  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:13  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
  *
- * Revision 1.32  1997/08/21 09:49:46  fritz
- * Increased NET_DV
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.31.2.17  1998/11/05 22:13:28  fritz
+ * Changed mail-address.
+ *
+ * Revision 1.31.2.16  1998/11/04 17:22:53  fritz
+ * Replaced broken lowlevel-driver locking.
+ *
+ * Revision 1.31.2.15  1998/11/03 14:31:57  fritz
+ * Reduced stack usage in various functions.
+ * Adapted statemachine to work with certified HiSax.
+ * Some fixes in callback handling.
+ *
+ * Revision 1.31.2.14  1998/10/25 14:37:37  fritz
+ * Backported from MIPS (Cobalt).
+ *
+ * Revision 1.31.2.13  1998/10/23 10:14:25  paul
+ * Implementation of "dialmode" (successor of "status")
+ * You also need current isdnctrl for this!
+ *
+ * Revision 1.31.2.12  1998/08/22 16:41:25  armin
+ * Added silence detection in audio receive mode (AT+VSD).
+ *
+ * Revision 1.31.2.11  1998/07/15 15:04:19  calle
+ * make isdn4k-utils compile again.
+ *
+ * Revision 1.31.2.10  1998/06/07 13:48:30  fritz
+ * ABC cleanup
+ *
+ * Revision 1.31.2.9  1998/06/02 12:12:49  detabc
+ * wegen einer einstweiliger verfuegung gegen DW ist zur zeit
+ * die abc-extension bis zur klaerung der rechtslage nicht verfuegbar
+ *
+ * Revision 1.31.2.8  1998/05/06 08:30:44  detabc
+ * add Item to stop icmp-unreach (max. 6 times of dialwait delay)
+ *
+ * Revision 1.31.2.7  1998/04/26 19:51:40  detabc
+ * removed unused code
+ *
+ * Revision 1.31.2.6  1998/04/26 11:10:46  detabc
+ * add items for the abc_tx_queus and the abc_delayed_hangup
+ * only used if the abc-extension is enabled
+ *
+ * Revision 1.31.2.5  1998/04/18 17:39:45  detabc
+ * remove some unused abc-lines
+ * added defines und items for abc-secure callback (only used with abc-extenrsion)
+ *
+ * Revision 1.31.2.4  1998/04/08 21:42:25  keil
+ * Blocksize default 1024
+ *
+ * Revision 1.31.2.3  1998/03/16 09:56:28  cal
+ * Merged in TimRu-patches. Still needs validation in conjunction with ABC-patches.
+ *
+ * Revision 1.31.2.2  1998/03/07 23:35:45  detabc
+ * added the abc-extension to the linux isdn-kernel
+ * for kernel-version 2.0.xx
+ * DO NOT USE FOR HIGHER KERNELS-VERSIONS
+ * all source-lines are switched with the define  CONFIG_ISDN_WITH_ABC
+ * (make config and answer ABC-Ext. Support (Compress,TCP-Keepalive ...) with yes
+ *
+ * you need also a modified isdnctrl-source the switch on the
+ * features of the abc-extension
+ *
+ * please use carefully. more detail will be follow.
+ * thanks
+ *
+ * Revision 1.31.2.1  1997/08/21 15:57:04  fritz
+ * Synchronized 2.0.X branch with 2.0.31-pre7
  *
  * Revision 1.31  1997/06/22 11:57:07  fritz
  * Added ability to adjust slave triggerlevel.
@@ -140,6 +228,7 @@
 #ifndef isdn_h
 #define isdn_h
 
+#include <linux/config.h>
 #include <linux/ioctl.h>
 
 #define ISDN_TTY_MAJOR    43
@@ -151,14 +240,21 @@
  * the correspondent code in isdn.c
  */
 
+#ifdef CONFIG_COBALT_MICRO_SERVER
+/* Save memory */
+#define ISDN_MAX_DRIVERS    2
+#define ISDN_MAX_CHANNELS   8
+#else
 #define ISDN_MAX_DRIVERS    32
 #define ISDN_MAX_CHANNELS   64
+#endif
 #define ISDN_MINOR_B        0
 #define ISDN_MINOR_BMAX     (ISDN_MAX_CHANNELS-1)
-#define ISDN_MINOR_CTRL     ISDN_MAX_CHANNELS
-#define ISDN_MINOR_CTRLMAX  (2*ISDN_MAX_CHANNELS-1)
-#define ISDN_MINOR_PPP      (2*ISDN_MAX_CHANNELS)
-#define ISDN_MINOR_PPPMAX   (3*ISDN_MAX_CHANNELS-1)
+#define ISDN_MINOR_CTRL     64
+#define ISDN_MINOR_CTRLMAX  (64 + (ISDN_MAX_CHANNELS-1))
+#define ISDN_MINOR_PPP      128
+#define ISDN_MINOR_PPPMAX   (128 + (ISDN_MAX_CHANNELS-1))
+#define ISDN_MINOR_LOG      254
 #define ISDN_MINOR_STATUS   255
 
 /* New ioctl-codes */
@@ -169,8 +265,8 @@
 #define IIOCNETANM  _IO('I',5)
 #define IIOCNETDNM  _IO('I',6)
 #define IIOCNETGNM  _IO('I',7)
-#define IIOCGETSET  _IO('I',8)
-#define IIOCSETSET  _IO('I',9)
+/* #define IIOCGETSET  _IO('I',8) obsolete */
+/* #define IIOCSETSET  _IO('I',9) obsolete */
 #define IIOCSETVER  _IO('I',10)
 #define IIOCNETHUP  _IO('I',11)
 #define IIOCSETGST  _IO('I',12)
@@ -213,6 +309,7 @@
 
 #define ISDN_MODEM_ANZREG    23        /* Number of Modem-Registers        */
 #define ISDN_MSNLEN          20
+#define ISDN_LMSNLEN         255 /* Length of tty's Listen-MSN string */
 
 typedef struct {
   char drvid[25];
@@ -233,6 +330,7 @@ typedef struct {
 
 #define NET_DV 0x04 /* Data version for net_cfg     */
 #define TTY_DV 0x04 /* Data version for iprofd etc. */
+#define INF_DV 0x01 /* Data version for /dev/isdninfo */
 
 typedef struct {
   char name[10];     /* Name of interface                     */
@@ -257,7 +355,16 @@ typedef struct {
   int  pppbind;      /* ippp device for bindings              */
   int  chargeint;    /* Use fixed charge interval length      */
   int  triggercps;   /* BogoCPS needed for triggering slave   */
+  int  dialtimeout;  /* Dial-Timeout                          */
+  int  dialwait;     /* Time to wait after failed dial        */
+  int  dialmode;     /* Flag: off / on / auto                 */
 } isdn_net_ioctl_cfg;
+
+#define ISDN_NET_DIALMODE_MASK 0xC0  /* bits for status                   */
+#define  ISDN_NET_DM_OFF	0x00    /* this interface is stopped      */
+#define  ISDN_NET_DM_MANUAL	0x40    /* this interface is on (manual)  */
+#define  ISDN_NET_DM_AUTO	0x80    /* this interface is autodial     */
+#define ISDN_NET_DIALMODE(x) ((&(x))->flags & ISDN_NET_DIALMODE_MASK)
 
 #ifdef __KERNEL__
 
@@ -349,6 +456,7 @@ typedef struct {
 /* Timeout-Values for isdn_net_dial() */
 #define ISDN_TIMER_DTIMEOUT10 (10*HZ/(ISDN_TIMER_02SEC*(ISDN_TIMER_RES+1)))
 #define ISDN_TIMER_DTIMEOUT15 (15*HZ/(ISDN_TIMER_02SEC*(ISDN_TIMER_RES+1)))
+#define ISDN_TIMER_DTIMEOUT60 (60*HZ/(ISDN_TIMER_02SEC*(ISDN_TIMER_RES+1)))
 
 /* GLOBAL_FLAGS */
 #define ISDN_GLOBAL_STOPPED 1
@@ -367,6 +475,12 @@ typedef struct {
 #define ISDN_NET_TMP        0x10       /* tmp interface until getting an IP */
 #define ISDN_NET_DYNAMIC    0x20       /* this link is dynamically allocated */
 #endif
+
+/*
+ * also see the ISDN_NET_DM_* defines earlier
+ * (they are not here, as we need access to those in userspace)
+ */
+
 #define ISDN_NET_MAGIC      0x49344C02 /* for paranoia-checking             */
 
 /* Phone-list-element */
@@ -374,6 +488,7 @@ typedef struct {
   void *next;
   char num[ISDN_MSNLEN];
 } isdn_net_phone;
+
 
 /* Local interface-data */
 typedef struct isdn_net_local_s {
@@ -426,7 +541,7 @@ typedef struct isdn_net_local_s {
   int                    sqfull;       /* Flag: netdev-queue overloaded    */
   ulong                  sqfull_stamp; /* Start-Time of overload           */
   ulong                  slavedelay;   /* Dynamic bundling delaytime       */
-  int                    triggercps;   /* BogoCPS needed for trigger slave */
+  int  					triggercps;	/* BogoCPS needed for triggering slave   */
   struct device          *srobin;      /* Ptr to Master device for slaves  */
   isdn_net_phone         *phone[2];    /* List of remote-phonenumbers      */
 				       /* phone[0] = Incoming Numbers      */
@@ -463,6 +578,11 @@ typedef struct isdn_net_local_s {
 				    struct device *,
                                     unsigned char *);
   int  pppbind;                        /* ippp device for bindings         */
+  int					dialtimeout;	/* How long shall we try on dialing? (jiffies) */
+  int			dialwait;		/* How long shall we wait after failed attempt? (jiffies) */
+  ulong			dialstarted;	/* jiffies of first dialing-attempt */
+  ulong			dialwait_timer;	/* jiffies of earliest next dialing-attempt */
+  int			huptimeout;	/* How long will the connection be up? (seconds) */
 } isdn_net_local;
 
 #ifdef CONFIG_ISDN_PPP
@@ -505,7 +625,8 @@ typedef struct isdn_net_dev_s {
 #define ISDN_ASYNC_PGRP_LOCKOUT       0x0200 /* Lock cua opens on pgrp       */
 #define ISDN_ASYNC_CALLOUT_NOHUP      0x0400 /* No hangup for cui            */
 #define ISDN_ASYNC_SPLIT_TERMIOS      0x0008 /* Sep. termios for dialin/out  */
-#define ISDN_SERIAL_XMIT_SIZE           4000 /* Maximum bufsize for write    */
+#define ISDN_SERIAL_XMIT_SIZE           1024 /* default bufsize for write    */
+#define ISDN_SERIAL_XMIT_MAX            4000 /* Maximum bufsize for write    */
 #define ISDN_SERIAL_TYPE_NORMAL            1
 #define ISDN_SERIAL_TYPE_CALLOUT           2
 
@@ -584,6 +705,7 @@ typedef struct modem_info {
   void                  *adpcms;         /* state for adpcm decompression  */
   void                  *adpcmr;         /* state for adpcm compression    */
   void                  *dtmf_state;     /* state for dtmf decoder         */
+  void			*silence_state;	 /* state for silence detection	   */
 #endif
   struct tty_struct 	*tty;            /* Pointer to corresponding tty   */
   atemu                 emu;             /* AT-emulator data               */
@@ -627,7 +749,7 @@ struct sqqueue {
 struct mpqueue {
   struct mpqueue *next;
   struct mpqueue *last;
-  long sqno;
+  long    sqno;
   struct sk_buff *skb;
   int BEbyte;
   unsigned long time;
@@ -666,8 +788,12 @@ struct ippp_struct {
   struct slcompress *slcomp;
 #endif
   unsigned long debug;
-  struct isdn_ppp_compressor *compressor,*link_compressor;
+  struct isdn_ppp_compressor *compressor, *link_compressor;
   void *decomp_stat,*comp_stat,*link_decomp_stat,*link_comp_stat;
+#ifdef ISDN_SYNCPPP_READDRESS
+  unsigned long	old_pa_addr;
+  unsigned long	old_pa_dstaddr;
+#endif
 };
 
 #endif
@@ -681,16 +807,19 @@ typedef struct {
   char *private;
 } infostruct;
 
+#define DRV_FLAG_RUNNING 1
+#define DRV_FLAG_REJBUS  2
+#define DRV_FLAG_LOADED  4
+
 /* Description of hardware-level-driver */
 typedef struct {
-  ulong               flags;            /* Flags                            */
+  ulong               online;           /* Channel-Online flags             */
+  ulong               flags;            /* Misc driver flags                */
+  int                 locks;            /* Number of locks for this driver  */
   int                 channels;         /* Number of channels               */
-  int                 reject_bus;       /* Flag: Reject rejected call on bus*/
   struct wait_queue  *st_waitq;         /* Wait-Queue for status-read's     */
   int                 maxbufsize;       /* Maximum Buffersize supported     */
   unsigned long       pktcount;         /* Until now: unused                */
-  int                 running;          /* Flag: Protocolcode running       */
-  int                 loaded;           /* Flag: Driver loaded              */
   int                 stavail;          /* Chars avail on Status-device     */
   isdn_if            *interface;        /* Interface to driver              */
   int                *rcverr;           /* Error-counters for B-Ch.-receive */

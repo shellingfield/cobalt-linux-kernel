@@ -8,14 +8,14 @@
  * 
  * Copyright 1997, Cobalt Microserver, Inc.
  * 
- * $Id: serial.h,v 1.1 1997/10/27 23:26:04 davem Exp $
+ * $Id: serial.h,v 1.2 1999/03/26 03:56:11 cjohnson Exp $
  */
  
 /*
  * Serial port definitions
  */
 #define kSCC_Base	kGal_DevBank1Base
-#define kHelloWorldMsg	"Cobalt Microserver Diagnostics - 'We serve it, you surf it'\n\r"
+#define kHelloWorldMsg	"Cobalt Networks Diagnostics - 'We serve it, you surf it'\n\r"
 #define kSCC_ChanA	0x01
 #define kSCC_ChanB	0x00
 #define kSCC_Direct	0x02

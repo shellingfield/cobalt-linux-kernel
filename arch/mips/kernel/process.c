@@ -72,6 +72,10 @@ void copy_thread(int nr, unsigned long clone_flags, unsigned long usp,
 		childregs->regs[29] = childksp;
 		p->tss.current_ds = KERNEL_DS;
 	} else {
+		if (usp & 7)
+			printk("warning: pid %d called clone() with "
+			       "misaligned stack pointer 0x%x\n", 
+				current->pid, usp);
 		childregs->regs[29] = usp;
 		p->tss.current_ds = USER_DS;
 	}

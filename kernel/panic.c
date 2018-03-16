@@ -44,6 +44,16 @@ NORET_TYPE void panic(const char * fmt, ...)
 	else
 		sys_sync();
 
+#ifdef CONFIG_REMOTE_DEBUG
+	{
+		void set_debug_traps(void);
+		void breakpoint(void);
+
+		set_debug_traps();
+		breakpoint();
+	}
+#endif
+
 	do_unblank_screen();
 
 	if (panic_timeout > 0)

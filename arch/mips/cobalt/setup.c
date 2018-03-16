@@ -7,7 +7,7 @@
  *
  * Copyright (C) 1996, 1997 by Ralf Baechle
  *
- * $Id: setup.c,v 1.15 1998/12/15 20:53:47 davem Exp $
+ * $Id: setup.c,v 1.17 1999/03/26 03:56:11 cjohnson Exp $
  */
 #include <linux/bios32.h>
 #include <linux/config.h>
@@ -299,4 +299,116 @@ int my_cacheflush(unsigned long start, unsigned long size, unsigned int what)
 {
 	flush_cache_range(current->mm, start, start + size);
 	return 0;
+}
+
+
+/*
+ * The ROM set the flag to 0x1 to turn off output.  This is interpreted
+ * as "valid", "no kernel output", and index '0' into the following
+ * tables.  We overload entry '0' to specify a sensible default rate.
+ */
+static int cons_baud_int[]  = { 9600, 0,  9600, 0, 0,  115200, 0, 0 };
+static int cons_baud_baud[] = { B9600, 0, B9600, 0, 0, B115200, 0, 0 };
+
+static union cobalt_cons_info
+cobalt_get_console_info(void)
+{
+    char board_id = 0;
+    static union cobalt_cons_info cons_info;
+    static int read_info = 0;
+    extern void add_init_env(char *);
+
+    if (read_info)
+	return cons_info;
+
+    VIA_PORT_WRITE(VIA_CMOS_ADDR, VIA_CMOS_CONSOLE_FLG);
+    cons_info.ccons_char = VIA_PORT_READ(VIA_CMOS_DATA);
+
+#if 0
+    printk("cobalt_get_console_info: read 0x%x from console flag\n",
+	    cons_info.ccons_char);
+#endif
+
+    /*
+     * CMOS hasn't been initialized or baud rate isn't known.
+     * - read the board id and provide backwards compat.
+     */
+    if (cons_info.ccons_bits.valid != VIA_CMOS_CONS_VALID
+		|| ! cons_baud_int[cons_info.ccons_bits.baud]
+		|| ! cons_baud_baud[cons_info.ccons_bits.baud]) {
+	pcibios_read_config_byte(0, PCI_DEVSHFT(COBALT_PCICONF_VIA),
+		VIA_COBALT_BRD_ID_REG, &board_id);
+
+#if 0
+	printk("cobalt_get_console_info: read 0x%x from board config\n",
+		board_id);
+#endif
+
+	switch (VIA_COBALT_BRD_REG_to_ID(board_id)) {
+	case COBALT_BRD_ID_QUBE1:
+	    cons_info.ccons_bits.baud = VIA_CMOS_CONS_115K;
+	    cons_info.ccons_bits.kout = 1;
+	    break;
+	case COBALT_BRD_ID_RAQ1:
+	    cons_info.ccons_bits.baud = VIA_CMOS_CONS_9600;
+	    cons_info.ccons_bits.kout = 1;
+	    break;
+	case COBALT_BRD_ID_QUBE2:
+	    cons_info.ccons_bits.baud = VIA_CMOS_CONS_9600;
+	    cons_info.ccons_bits.kout = 0;
+	    break;
+	case COBALT_BRD_ID_RAQ2:
+	    cons_info.ccons_bits.baud = VIA_CMOS_CONS_9600;
+	    cons_info.ccons_bits.kout = 1;
+	    break;
+	}
+	cons_info.ccons_bits.valid = VIA_CMOS_CONS_VALID;
+    }
+
+    read_info = 1;
+
+#if defined(DEBUG_LOADER)
+    cons_info.ccons_bits.kout = 1;
+#endif
+
+    if ( ! cons_info.ccons_bits.kout) {
+	add_init_env("CONSOLE=/dev/null");
+    }
+
+#if 0
+    printk("cobalt_get_console_info: returning 0x%x\n",
+	    cons_info.ccons_char);
+#endif
+
+    return cons_info;
+}
+
+int
+cobalt_cons_koutok(void)
+{
+    union cobalt_cons_info cons;
+
+    cons = cobalt_get_console_info();
+
+    return cons.ccons_bits.kout;
+}
+
+int
+cobalt_cons_baudbaud(void)
+{
+    union cobalt_cons_info cons;
+
+    cons = cobalt_get_console_info();
+
+    return cons_baud_baud[cons.ccons_bits.baud];
+}
+
+int
+cobalt_cons_baudint(void)
+{
+    union cobalt_cons_info cons;
+
+    cons = cobalt_get_console_info();
+
+    return cons_baud_int[cons.ccons_bits.baud];
 }

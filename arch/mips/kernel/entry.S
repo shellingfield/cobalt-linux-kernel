@@ -7,7 +7,7 @@
  *
  * Copyright (C) 1994, 1995 by Ralf Baechle
  *
- * $Id: entry.S,v 1.5 1999/02/25 04:29:08 cjohnson Exp $
+ * $Id: entry.S,v 1.6 1999/06/16 03:24:28 cjohnson Exp $
  */
 
 /*
@@ -46,8 +46,11 @@ handle_bottom_half:
 		addiu	s2, s1, 1
 		sw	s2, %lo(intr_count)(s0)
 
-		ori	t0, s3, (0x1f | STATUSF_IP3 | STATUSF_IP4)
-		xori	t0, (0x1e | STATUSF_IP3 | STATUSF_IP4)
+		ori	t0, s3, 0x1f
+		xori	t0, 0x1e
+
+		# ori	t0, s3, (0x1f | STATUSF_IP3 | STATUSF_IP4)
+		# xori	t0, (0x1e | STATUSF_IP3 | STATUSF_IP4)
 
 		jal	do_bottom_half
 		 mtc0	t0, CP0_STATUS

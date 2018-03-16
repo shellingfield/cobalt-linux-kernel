@@ -21,7 +21,7 @@
 #include <asm/system.h>
 #include <asm/dma.h>
 
-/* Define this if you want slow routines that try to trip errors */
+/* Define this if you want to try to catch 'use after free' bugs */
 #undef SADISTIC_KMALLOC
 
 /* Private flags. */
@@ -29,6 +29,36 @@
 #define MF_USED 0xffaa0055
 #define MF_DMA  0xff00aa55
 #define MF_FREE 0x0055ffaa
+
+/*
+ * Define this is you think you are loosing your memory
+ * - call mem_leak_dump() to see who has what.
+ * Only tested on mips.
+ */
+#undef MEM_LEAK_CHK
+
+#if defined(MEM_LEAK_CHK) /* { */
+
+void mem_leak_insert(void *va, void *pc, int len);
+void mem_leak_delete(void *va, int len);
+
+#ifdef mips /* { */
+		/* Tacky, but builtin_return_address is broken */
+#define MEM_LEAK_GET_RA 	\
+		void *ra_save; __asm__("sw $31,%0": "=m" (ra_save) : )
+#define MEM_LEAK_RA ra_save
+#else	/* } untested below { */
+#define MEM_LEAK_GET_RA
+#define MEM_LEAK_RA builtin_return_address(1)
+#endif /* } */
+
+#define MEM_LEAK_INSERT(va, pc, len)	mem_leak_insert(va, pc, len)
+#define MEM_LEAK_DELETE(va, len)	mem_leak_delete(va, len)
+#else /* } MEM_LEAK_CHK { */
+#define MEM_LEAK_GET_RA
+#define MEM_LEAK_INSERT(va, pc, len)
+#define MEM_LEAK_DELETE(va, len)
+#endif /* } */
 
 
 /*
@@ -236,6 +266,7 @@ void *kmalloc(size_t size, int priority)
 	struct block_header *p;
 	struct page_descriptor *page, **pg;
 	struct size_descriptor *bucket = sizes;
+	MEM_LEAK_GET_RA;	/* Must be last */
 
 	/* Get order */
 	order = 0;
@@ -298,6 +329,7 @@ found_it:
 #ifdef SADISTIC_KMALLOC
 	memset(p+1, 0xf0, size);
 #endif
+	MEM_LEAK_INSERT(p + 1, MEM_LEAK_RA, size);
 	return p + 1;		/* Pointer arithmetic: increments past header */
 
 
@@ -386,6 +418,9 @@ void kfree(void *__ptr)
 
 	if (!__ptr)
 		goto null_kfree;
+
+	MEM_LEAK_DELETE(__ptr, 0);
+
 #define ptr ((struct block_header *) __ptr)
 	page = PAGE_DESC(ptr);
 	__ptr = ptr - 1;
@@ -404,6 +439,7 @@ void kfree(void *__ptr)
 	}
 	if (ptr->bh_flags != MF_USED)
 		goto bad_order;
+
 	ptr->bh_flags = MF_FREE;	/* As of now this block is officially free */
 #ifdef SADISTIC_KMALLOC
 	memset(ptr+1, 0xe0, ptr->bh_length);
@@ -451,3 +487,313 @@ not_on_freelist:
 	restore_flags(flags);
 	printk("Ooops. page %p doesn't show on freelist.\n", page);
 }
+
+
+#ifdef MEM_LEAK_CHK /* { */
+struct mem_hash {
+    void		*va;		/* vaddr of hash */
+    struct leak_pc_data	*data;
+    struct mem_hash	*next;
+    void		*pad;		/* to simplify alignment */
+};
+
+/* 
+ * These numbers are derived by inspection from the
+ * "blocksize" arrays above.  It should be dynamic.
+ */
+#define LEAK_NLENS 14 /* kernel vm number */
+/* #define LEAK_NLENS 8 user mode test number */
+#define MIN_ALLOC_SHFT 6
+#define MAX_ALLOC_SHFT (MIN_ALLOC_SHFT + LEAK_NLENS)
+
+struct leak_pc_data {
+    void	*pc;
+    int		tot_allocs;
+    int		len[LEAK_NLENS];	/* active allocs per len */
+};
+
+/*
+ * These hashlists grows for every PC that does does an alloc, and we
+ * track an entry in the va hash for every active alloc
+ */
+
+#define LEAK_NHASH	4096
+
+struct mem_hash *mem_leak_pc[LEAK_NHASH];
+struct mem_hash *mem_leak_va[LEAK_NHASH];
+
+char *leak_cur_alloc;	/* ptr to page for next leak struct alloc */
+char *leak_cur_end;	/* ptr to end of region for next leak alloc */
+int meta_alloc;
+
+int leak_nmallocs;
+int leak_nfrees;
+
+#define LEAK_VA_ALGN	2
+#define LEAK_HASH(va)	(((int) (va) >> LEAK_VA_ALGN) & (LEAK_NHASH - 1))
+
+struct mem_hash  *vahash_list;	/* we recycle VA mem_hash structures */
+
+#define dprint if (0) printk
+
+void *
+mem_leak_alloc(int size)
+{
+    void *cur;
+    /*
+     * Do we have spare mem_hash's lying around?
+     */
+    if (size == sizeof(struct mem_hash) && vahash_list) {
+	cur = vahash_list;
+	vahash_list = vahash_list->next;
+	return cur;
+    }
+
+    /*
+     * No recycled structs, so see if we have space in the current
+     * block of free space.  If no, do the alloc thing...
+     */
+    if (leak_cur_alloc + size > leak_cur_end) {
+	leak_cur_alloc = (char *) get_kmalloc_pages(GFP_ATOMIC, 1, 0);
+	if ( ! leak_cur_alloc) {
+	    leak_cur_end = NULL;
+	    printk("mem_leak_alloc: malloc failed\n");
+	    return NULL;
+	}
+	leak_cur_end = leak_cur_alloc + PAGE_SIZE;
+	meta_alloc += PAGE_SIZE;
+    }
+    cur = leak_cur_alloc;
+    leak_cur_alloc += size;
+
+    return (void *) cur;
+}
+
+void
+mem_leak_free(void *va, int size)
+{
+    struct mem_hash *vam;
+
+    if (size != sizeof(struct mem_hash)) {
+	printk("mem_leak_free: unexpected size %d\n", size);
+	return;
+    }
+
+    vam = (struct mem_hash *) va;
+
+    vam->next = vahash_list;
+    vahash_list = vam;
+}
+
+void
+mem_leak_insert(void *va, void *pc, int len)
+{
+    struct mem_hash	**pchp;
+    struct mem_hash	**vahp;
+    struct leak_pc_data	*lpcd;
+    int			bckt;
+    unsigned long flags;
+
+    save_flags(flags);
+    cli();
+
+    dprint("mem_leak_insert: add va 0x%x, pc 0x%x, len 0x%x\n",
+	    (int) va, (int) pc, len);
+    /*
+     * Look up the pc, create if necessary, then
+     * lookup the va and point it at the pc.
+     *
+     * complain if va already allocated
+     */
+    pchp = &mem_leak_pc[LEAK_HASH(pc)];
+
+    while (*pchp && (*pchp)->va != pc)
+	pchp = &(*pchp)->next;
+
+    /*
+     * Do we need alloc?
+     */
+    if ( ! *pchp) {
+	*pchp = mem_leak_alloc(sizeof(**pchp));
+	if ( ! *pchp) {
+	    restore_flags(flags);
+	    return;
+	}
+	memset(*pchp, 0, sizeof(**pchp));
+	(*pchp)->va = pc;
+	(*pchp)->data = (struct leak_pc_data *)
+			mem_leak_alloc(sizeof(struct leak_pc_data));
+
+	if ( ! (*pchp)->data) {
+	    mem_leak_free(*pchp, sizeof(*pchp));
+	    *pchp = 0;
+	    restore_flags(flags);
+	    return;
+	}
+	lpcd = (*pchp)->data;
+	memset(lpcd, 0, sizeof(struct leak_pc_data));
+	lpcd->pc = pc;
+    }
+    else {
+	lpcd = (*pchp)->data;
+	if (lpcd->pc != pc) {
+	    printk("mem_leak_insert: pc mismatch have 0x%x, found 0x%x\n",
+		    (int) pc, (int) lpcd->pc);
+	}
+    }
+
+    dprint("\tleak_pc_data at 0x%x\n", (int) lpcd);
+
+    for (bckt = 0; 1 << (bckt + MIN_ALLOC_SHFT) < len
+    			&& bckt < LEAK_NLENS - 1; bckt++)
+	    ;
+
+    vahp = &mem_leak_va[LEAK_HASH(va)];
+
+    while (*vahp && (*vahp)->va != va)
+	vahp = &(*vahp)->next;
+
+    if ( ! *vahp) {
+	*vahp = mem_leak_alloc(sizeof(**vahp));
+
+	if ( ! (*vahp)) {
+	    restore_flags(flags);
+	    return;
+	}
+	memset(*vahp, 0, sizeof(**vahp));
+	(*vahp)->va = va;
+    }
+
+    lpcd->tot_allocs++;
+    lpcd->len[bckt]++;
+
+    if ((*vahp)->data) {
+	printk("mem_leak_insert: va 0x%x not free - old pc 0x%x, new pc 0x%x\n",
+		(int) va, (int) (*vahp)->data->pc, (int) lpcd->pc);
+    }
+
+    (*vahp)->data = lpcd;
+    (*vahp)->pad = (void *) len;
+    leak_nmallocs++;
+    restore_flags(flags);
+}
+
+/*
+ *    Delete a VA and decrement the PC histogram.
+ */
+void
+mem_leak_delete(void *va, int len)
+{
+    struct mem_hash	**vahp, *ovap;
+    struct leak_pc_data	*lpcd;
+    int			bckt;
+    unsigned long flags;
+
+    dprint("mem_leak_delete: del va 0x%x ", (int) va);
+
+    save_flags(flags);
+    cli();
+
+    vahp = &mem_leak_va[LEAK_HASH(va)];
+
+    while (*vahp && (*vahp)->va != va)
+	vahp = &(*vahp)->next;
+
+    if ( ! *vahp) {
+	printk("mem_leak_delete: va 0x%x never allocated\n", (int) va);
+	restore_flags(flags);
+	return;
+    }
+    ovap = *vahp;
+
+    lpcd = ovap->data;
+
+    if ( ! lpcd) {
+	printk("mem_leak_delete: va 0x%x currently free\n", (int) va);
+	restore_flags(flags);
+	return;
+    }
+
+    if ( ! len)
+	len = (int) ovap->pad;
+
+    dprint("pc 0x%x, len 0x%x\n", (int) lpcd->pc, len);
+    dprint("\tleak_pc_data at 0x%x\n", (int) lpcd);
+
+    for (bckt = 0; 1 << (bckt + MIN_ALLOC_SHFT) < len
+    			&& bckt < LEAK_NLENS - 1; bckt++)
+	    ;
+
+    if (--lpcd->tot_allocs < 0) {
+	printk("mem_leak_delete: total underflow pc 0x%x\n", (int) lpcd->pc);
+    }
+    if (--lpcd->len[bckt] < 0) {
+	printk("mem_leak_delete: underflow pc 0x%x, bucket %d\n",
+			(int) lpcd->pc, 1 << (bckt + MIN_ALLOC_SHFT));
+    }
+    *vahp = ovap->next;
+    mem_leak_free(ovap, sizeof(*ovap));
+    leak_nfrees++;
+    restore_flags(flags);
+}
+
+void
+mem_leak_dump(void)
+{
+    struct mem_hash *pc;
+    struct leak_pc_data *lpcd;
+    int i, j;
+    int do_warn;
+    int tot_sum, sum;
+    int outcnt;
+    unsigned long flags;
+
+    save_flags(flags);
+    cli(); 
+
+    printk("%d total mallocs, %d active, %d pages meta data\n",
+	    leak_nmallocs, leak_nmallocs - leak_nfrees,
+	    (int) (meta_alloc / PAGE_SIZE));
+    tot_sum = 0;
+    for (i = 0; i < LEAK_NHASH; i++) {
+	for (pc = mem_leak_pc[i]; pc; pc = pc->next) {
+	    lpcd = pc->data;
+	    do_warn = 1;
+	    sum = 0;
+	    tot_sum += lpcd->tot_allocs;
+	    outcnt = 0;
+
+	    if (lpcd->pc != pc->va) {
+		printk("pc mismatch hash 0x%x, histogram 0x%x\n",
+			(int) pc->va, (int) lpcd->pc);
+	    }
+	    if (lpcd->tot_allocs) 
+		printk("0x%08x : %-6d - ", (int) pc->va, lpcd->tot_allocs);
+
+	    for (j = 0; j < LEAK_NLENS; j++) {
+		if (lpcd->len[j]) {
+		    sum += lpcd->len[j];
+		    if ( ! lpcd->tot_allocs && do_warn) {
+			printk("0x%x : zero         - ", (int) pc->va);
+			do_warn = 0;
+		    }
+		    outcnt++;
+		    if (outcnt && (outcnt % 4) == 0)
+			printk("\n                      ");
+		    printk("%5d : %-5d ",
+		    		1 << (MIN_ALLOC_SHFT + j), lpcd->len[j]);
+		}
+	    }
+	    if (lpcd->tot_allocs || do_warn == 0)
+		printk("\n");
+	    if (sum != lpcd->tot_allocs)
+		printk("WARNING: total allocs != sum of allocs\n");
+	}
+    }
+    if (tot_sum != leak_nmallocs - leak_nfrees) {
+	printk("total allocs %d not balanced with mallocs/frees\n", tot_sum);
+    }
+    printk("\n");
+    restore_flags(flags);
+}
+#endif /* } MEM_LEAK_CHK */

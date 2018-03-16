@@ -91,7 +91,7 @@
 /*
  * Don't inline the functions for better debugging.
  */
-#define __inline__
+/*#define __inline__*/
 
 /*
  * Damned ...  There is just too much bad code with that Intel desease in
@@ -132,7 +132,7 @@ store_mem(unsigned long addr, unsigned int size, unsigned long val)
 }
 
 /*
- * Bummer: accesses by the kerne can be assumed to be good.  However
+ * Bummer: accesses by the kernel can be assumed to be good.  However
  * we need to call verify_area to check userspace addresses for sanity.
  * This sucks, but as I'm doing this here I'm too conservative to pull
  * the 2.1.x exception handling into this kernel.
@@ -216,14 +216,85 @@ do_reg_store:
 		return;
 
 	case lwc1_op:
+		size = 8; goto do_fp_load;
 	case ldc1_op:
-	case swc1_op:
-	case sdc1_op:
-		/*
-		 * I herewith declare: this does not happen.  So send SIGBUS.
-		 */
-		force_sig(SIGBUS, current);
+		size = 4;
+
+do_fp_load:
+		if (!kernelmode &&
+		    verify_area(VERIFY_READ, (void *)addr, size) < 0) {
+			force_sig(SIGSEGV, current);
+			return;
+		}
+
+		regs->cp0_status |= ST0_CU1;
+#define FPLD_ASM(reg)	\
+		value = load_mem(addr, 4);				\
+		__asm__( "\tlwc1\t$f"#reg",%0\n": : "m" (value));	\
+			if (insn.i_format.opcode == lwc1_op || (reg) & 1) \
+				break;					\
+			else addr += 4;
+
+		switch(insn.i_format.rt) {
+		    case 0: FPLD_ASM(0); case 1: FPLD_ASM(1);
+		    case 2: FPLD_ASM(2); case 3: FPLD_ASM(3);
+		    case 4: FPLD_ASM(4); case 5: FPLD_ASM(5);
+		    case 6: FPLD_ASM(6); case 7: FPLD_ASM(7);
+		    case 8: FPLD_ASM(8); case 9: FPLD_ASM(9);
+		    case 10: FPLD_ASM(10); case 11: FPLD_ASM(11);
+		    case 12: FPLD_ASM(12); case 13: FPLD_ASM(13);
+		    case 14: FPLD_ASM(14); case 15: FPLD_ASM(15);
+		    case 16: FPLD_ASM(16); case 17: FPLD_ASM(17);
+		    case 18: FPLD_ASM(18); case 19: FPLD_ASM(19);
+		    case 20: FPLD_ASM(20); case 21: FPLD_ASM(21);
+		    case 22: FPLD_ASM(22); case 23: FPLD_ASM(23);
+		    case 24: FPLD_ASM(24); case 25: FPLD_ASM(25);
+		    case 26: FPLD_ASM(26); case 27: FPLD_ASM(27);
+		    case 28: FPLD_ASM(28); case 29: FPLD_ASM(29);
+		    case 30: FPLD_ASM(30); case 31: FPLD_ASM(31);
+		}
 		return;
+
+	case swc1_op:
+		size=4; goto do_fp_store;
+	case sdc1_op:
+		size=8;
+
+do_fp_store:
+		if (!kernelmode &&
+		    verify_area(VERIFY_READ, (void *)addr, size) < 0) {
+			force_sig(SIGSEGV, current);
+			return;
+		}
+
+		regs->cp0_status |= ST0_CU1;
+#define FPST_ASM(reg)	\
+		__asm__( "\tswc1\t$f"#reg",%0\n": : "m" (value));	\
+			store_mem(addr, 4, value);			\
+			if (insn.i_format.opcode == swc1_op || (reg) & 1) \
+				break;					\
+			else addr += 4;
+
+		switch(insn.i_format.rt) {
+		    case 0: FPST_ASM(0); case 1: FPST_ASM(1);
+		    case 2: FPST_ASM(2); case 3: FPST_ASM(3);
+		    case 4: FPST_ASM(4); case 5: FPST_ASM(5);
+		    case 6: FPST_ASM(6); case 7: FPST_ASM(7);
+		    case 8: FPST_ASM(8); case 9: FPST_ASM(9);
+		    case 10: FPST_ASM(10); case 11: FPST_ASM(11);
+		    case 12: FPST_ASM(12); case 13: FPST_ASM(13);
+		    case 14: FPST_ASM(14); case 15: FPST_ASM(15);
+		    case 16: FPST_ASM(16); case 17: FPST_ASM(17);
+		    case 18: FPST_ASM(18); case 19: FPST_ASM(19);
+		    case 20: FPST_ASM(20); case 21: FPST_ASM(21);
+		    case 22: FPST_ASM(22); case 23: FPST_ASM(23);
+		    case 24: FPST_ASM(24); case 25: FPST_ASM(25);
+		    case 26: FPST_ASM(26); case 27: FPST_ASM(27);
+		    case 28: FPST_ASM(28); case 29: FPST_ASM(29);
+		    case 30: FPST_ASM(30); case 31: FPST_ASM(31);
+		}
+		return;
+
 	case lwc2_op:
 	case ldc2_op:
 	case swc2_op:

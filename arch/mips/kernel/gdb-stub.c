@@ -12,7 +12,7 @@
  *
  *  Copyright (C) 1995 Andreas Busse
  *
- * $Id: gdb-stub.c,v 1.2 1997/10/27 23:26:19 davem Exp $
+ * $Id: gdb-stub.c,v 1.4 1999/06/16 03:24:28 cjohnson Exp $
  */
 
 /*
@@ -84,7 +84,6 @@
 
 extern int putDebugChar(char c);    /* write a single character      */
 extern char getDebugChar(void);     /* read and return a single char */
-extern void fltr_set_mem_err(void);
 extern void trap_low(void);
 
 /*
@@ -117,6 +116,21 @@ static char output_buffer[BUFMAX];
 static int initialized = 0;	/* !0 means we've been initialized */
 static const char hexchars[]="0123456789abcdef";
 
+/*
+ * This "works" because printk uses a different backend than putDebugChar.
+ * putDebugChar() sets the high bit, which is stripped by gdb then used
+ * for its own protocol.  Gdb forwards output without the high bit on
+ * straight to the user.  This hack give kernel printk and gdb together.
+ */
+#ifdef WAY_TOO_MUCH_DEBUG
+#define dbg_out printk
+#else
+/* 
+ * The compiler ought to know to zap the following
+ */
+#define dbg_out if (0) printk
+#endif
+
 
 /*
  * Convert ch from a hex digit to an int
@@ -143,12 +157,17 @@ static void getpacket(char *buffer)
 	int count;
 	unsigned char ch;
 
+	dbg_out(" kgetpacket\n");
 	do {
 		/*
 		 * wait around for the start character,
 		 * ignore all other characters
 		 */
-		while ((ch = (getDebugChar() & 0x7f)) != '$') ;
+		while ((ch = (getDebugChar() & 0x7f)) != '$') {
+			dbg_out(" kgtp skip %c\n", ch);
+			;
+		}
+		dbg_out("got start\n");
 
 		checksum = 0;
 		xmitcsum = -1;
@@ -159,6 +178,7 @@ static void getpacket(char *buffer)
 		 */
 		while (count < BUFMAX) {
 			ch = getDebugChar() & 0x7f;
+			dbg_out("kgtp keep %c\n", ch);
 			if (ch == '#')
 				break;
 			checksum = checksum + ch;
@@ -175,9 +195,12 @@ static void getpacket(char *buffer)
 			xmitcsum = hex(getDebugChar() & 0x7f) << 4;
 			xmitcsum |= hex(getDebugChar() & 0x7f);
 
-			if (checksum != xmitcsum)
+			if (checksum != xmitcsum) {
+				dbg_out(" kgtp nak\n");
 				putDebugChar('-');	/* failed checksum */
+			}
 			else {
+				dbg_out(" kgtp ack\n");
 				putDebugChar('+'); /* successful transfer */
 
 				/*
@@ -199,6 +222,8 @@ static void getpacket(char *buffer)
 		}
 	}
 	while (checksum != xmitcsum);
+
+	dbg_out("kgetpacket read \"%s\"\n", buffer);
 }
 
 /*
@@ -214,7 +239,8 @@ static void putpacket(char *buffer)
 	 * $<packet info>#<checksum>.
 	 */
 
-	do {
+	dbg_out(" ksend \"%s\"\n", buffer);
+	while (1) {
 		putDebugChar('$');
 		checksum = 0;
 		count = 0;
@@ -230,31 +256,26 @@ static void putpacket(char *buffer)
 		putDebugChar(hexchars[checksum >> 4]);
 		putDebugChar(hexchars[checksum & 0xf]);
 
+		ch = getDebugChar() & 0x7f;
+
+		if (ch == '+') {
+		    dbg_out("kptpk ack\n");
+		    break;
+		}
+		else if (ch == '-')
+		    dbg_out("kptpk nak\n");
+		else dbg_out("kptpk bad ack/nak '%c'\n", ch);
 	}
-	while ((getDebugChar() & 0x7f) != '+');
 }
 
 
 /*
- * Indicate to caller of mem2hex or hex2mem that there
- * has been an error.
+ * Handshake with mips/mm/fault.c:do_page_fault()
+ * to deal with bad memory addresses.
  */
-static volatile int mem_err = 0;
 
-
-#if 0
-static void set_mem_fault_trap(int enable)
-{
-  mem_err = 0;
-
-#if 0
-  if (enable)
-    exceptionHandler(9, fltr_set_mem_err);
-  else
-    exceptionHandler(9, trap_low);
-#endif  
-}
-#endif /* dead code */
+volatile int debugmem_got_flt;
+int debugmem_flt_set;
 
 /*
  * Convert the memory pointed to by mem into hex, placing result in buf.
@@ -267,19 +288,21 @@ static unsigned char *mem2hex(char *mem, char *buf, int count, int may_fault)
 {
 	unsigned char ch;
 
-/*	set_mem_fault_trap(may_fault); */
+	debugmem_got_flt = 0;
+	debugmem_flt_set = 1;
 
-	while (count-- > 0) {
+	while (count-- > 0 && ! debugmem_got_flt) {
 		ch = *(mem++);
-		if (mem_err)
-			return 0;
 		*buf++ = hexchars[ch >> 4];
 		*buf++ = hexchars[ch & 0xf];
 	}
 
-	*buf = 0;
+	if (debugmem_got_flt)
+	    buf = 0;
+	else *buf = 0;
 
-/*	set_mem_fault_trap(0); */
+	debugmem_got_flt = 0;
+	debugmem_flt_set = 0;
 
 	return buf;
 }
@@ -293,39 +316,48 @@ static char *hex2mem(char *buf, char *mem, int count, int may_fault)
 	int i;
 	unsigned char ch;
 
-/*	set_mem_fault_trap(may_fault); */
+	debugmem_got_flt = 0;
+	debugmem_flt_set = 1;
 
-	for (i=0; i<count; i++)
+	for (i=0; i<count && ! debugmem_got_flt; i++)
 	{
 		ch = hex(*buf++) << 4;
 		ch |= hex(*buf++);
 		*(mem++) = ch;
-		if (mem_err)
-			return 0;
 	}
 
-/*	set_mem_fault_trap(0); */
+	if (debugmem_got_flt)
+	    mem = 0;
+
+	debugmem_got_flt = 0;
+	debugmem_flt_set = 0;
 
 	return mem;
 }
 
 /*
- * This table contains the mapping between SPARC hardware trap types, and
+ * This table contains the mapping between MIPS hardware trap types, and
  * signals, which are primarily what GDB understands.  It also indicates
  * which hardware traps we need to commandeer when initializing the stub.
+ *
+ * XXXX - note that we don't deal with address errors.  These actually
+ *        happen in the kernel, and the instruction emulator cleans them
+ *	  up.  If the kernel trap interface was clean, we could use them,
+ *	  but it isn't.  Also, we use the wrong regs struct.  Bletch.
+ *        cj*
  */
 static struct hard_trap_info
 {
 	unsigned char tt;		/* Trap type code for MIPS R3xxx and R4xxx */
 	unsigned char signo;		/* Signal that we map this trap into */
 } hard_trap_info[] = {
-	{ 4, SIGBUS },			/* address error (load) */
-	{ 5, SIGBUS },			/* address error (store) */
+	/* { 4, SIGBUS }, */			/* address error (load) */
+	/* { 5, SIGBUS }, */			/* address error (store) */
 	{ 6, SIGBUS },			/* instruction bus error */
 	{ 7, SIGBUS },			/* data bus error */
 	{ 9, SIGTRAP },			/* break */
 	{ 10, SIGILL },			/* reserved instruction */
-/*	{ 11, SIGILL },		*/	/* cpu unusable */
+	{ 11, SIGILL },			/* cpu unusable */
 	{ 12, SIGFPE },			/* overflow */
 	{ 13, SIGTRAP },		/* trap */
 	{ 14, SIGSEGV },		/* virtual instruction cache coherency */
@@ -343,39 +375,35 @@ void set_debug_traps(void)
 {
 	struct hard_trap_info *ht;
 	unsigned long flags;
-	unsigned char c;
 
-	save_and_cli(flags);
-	for (ht = hard_trap_info; ht->tt && ht->signo; ht++)
-		set_except_vector(ht->tt, trap_low);
-  
+	if ( ! initialized) {
+	    save_and_cli(flags);
+	    for (ht = hard_trap_info; ht->tt && ht->signo; ht++)
+		    set_except_vector(ht->tt, trap_low);
+
+	    initialized = 1;
+	    restore_flags(flags);
+	}
+}
+
+void sync_debug_inp(void)
+{
+	unsigned char c;
 	/*
 	 * In case GDB is started before us, ack any packets
 	 * (presumably "$?#xx") sitting there.
+	 *
+	 * XXX - this should timeout, getDebugChar() blocks.
 	 */
-	while((c = getDebugChar()) != '$');
-	while((c = getDebugChar()) != '#');
+	while((c = getDebugChar()) != '$')
+		;
+	while((c = getDebugChar()) != '#')
+		;
 	c = getDebugChar(); /* eat first csum byte */
 	c = getDebugChar(); /* eat second csum byte */
 	putDebugChar('+'); /* ack it */
-
-	initialized = 1;
-	restore_flags(flags);
-
-	breakpoint();
 }
 
-
-/*
- * Trap handler for memory errors.  This just sets mem_err to be non-zero.  It
- * assumes that %l1 is non-zero.  This should be safe, as it is doubtful that
- * 0 would ever contain code that could mem fault.  This routine will skip
- * past the faulting instruction after setting mem_err.
- */
-extern void fltr_set_mem_err(void)
-{
-  /* FIXME: Needs to be written... */
-}
 
 /*
  * Convert the MIPS hardware trap type code to a unix signal number.
@@ -418,7 +446,7 @@ static int hexToInt(char **ptr, int *intValue)
 }
 
 
-#if 0
+#if 1
 /*
  * Print registers (on target console)
  * Used only to debug the stub...
@@ -428,23 +456,23 @@ void show_gdbregs(struct gdb_regs * regs)
 	/*
 	 * Saved main processor registers
 	 */
-	printk("$0 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	dbg_out("$0 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
 	       regs->reg0, regs->reg1, regs->reg2, regs->reg3,
                regs->reg4, regs->reg5, regs->reg6, regs->reg7);
-	printk("$8 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	dbg_out("$8 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
 	       regs->reg8, regs->reg9, regs->reg10, regs->reg11,
                regs->reg12, regs->reg13, regs->reg14, regs->reg15);
-	printk("$16: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	dbg_out("$16: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
 	       regs->reg16, regs->reg17, regs->reg18, regs->reg19,
                regs->reg20, regs->reg21, regs->reg22, regs->reg23);
-	printk("$24: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	dbg_out("$24: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
 	       regs->reg24, regs->reg25, regs->reg26, regs->reg27,
 	       regs->reg28, regs->reg29, regs->reg30, regs->reg31);
 
 	/*
 	 * Saved cp0 registers
 	 */
-	printk("epc  : %08lx\nStatus: %08lx\nCause : %08lx\n",
+	dbg_out("epc  : %08lx\nStatus: %08lx\nCause : %08lx\n",
 	       regs->cp0_epc, regs->cp0_status, regs->cp0_cause);
 }
 #endif /* dead code */
@@ -454,7 +482,7 @@ void show_gdbregs(struct gdb_regs * regs)
  * returns 1 if you should skip the instruction at the trap address, 0
  * otherwise.
  */
-void handle_exception (struct gdb_regs *regs)
+asmlinkage void handle_exception (struct gdb_regs *regs)
 {
 	int trap;			/* Trap type */
 	int sigval;
@@ -462,9 +490,10 @@ void handle_exception (struct gdb_regs *regs)
 	int length;
 	char *ptr;
 	unsigned long *stack;
+	static int init = 0;
 
-#if 0	
-	printk("in handle_exception()\n");
+#if 1
+	dbg_out("in handle_exception()\n");
 	show_gdbregs(regs);
 #endif
 	
@@ -476,12 +505,19 @@ void handle_exception (struct gdb_regs *regs)
 	 * traps for now.
 	 */
 	trap = (regs->cp0_cause & 0x7c) >> 2;
-/*	printk("trap=%d\n",trap); */
+	dbg_out("trap=%d\n",trap);
 	if (trap == 11) {
 		if (((regs->cp0_cause >> CAUSEB_CE) & 3) == 1) {
+			memset(&current->tss.fpu, 0,
+					sizeof(union mips_fpu_union));
 			regs->cp0_status |= ST0_CU1;
 			return;
 		}
+	}
+
+	if ( ! init) {
+		sync_debug_inp();
+		init = 1;
 	}
 
 	/*
@@ -559,38 +595,28 @@ void handle_exception (struct gdb_regs *regs)
 		 * Return the value of the CPU registers
 		 */
 		case 'g':
-			ptr = output_buffer;
-			ptr = mem2hex((char *)&regs->reg0, ptr, 32*4, 0); /* r0...r31 */
-			ptr = mem2hex((char *)&regs->cp0_status, ptr, 6*4, 0); /* cp0 */
-			ptr = mem2hex((char *)&regs->fpr0, ptr, 32*4, 0); /* f0...31 */
-			ptr = mem2hex((char *)&regs->cp1_fsr, ptr, 2*4, 0); /* cp1 */
-			ptr = mem2hex((char *)&regs->frame_ptr, ptr, 2*4, 0); /* frp */
-			ptr = mem2hex((char *)&regs->cp0_index, ptr, 16*4, 0); /* cp0 */
+			(void) mem2hex(KGDB_USERREGS_START(regs), output_buffer,
+				    KGDB_USERREGS_BYTES, 0);
 			break;
 	  
 		/*
 		 * set the value of the CPU registers - return OK
-		 * FIXME: Needs to be written
+		 * FIXME: Needs to be written - maybe not (cj)
 		 */
 		case 'G':
 		{
-#if 0
-			unsigned long *newsp, psr;
+			struct gdb_regs newregs;
 
-			ptr = &input_buffer[1];
-			hex2mem(ptr, (char *)registers, 16 * 4, 0); /* G & O regs */
-
-			/*
-			 * See if the stack pointer has moved. If so, then copy the
-			 * saved locals and ins to the new location.
-			 */
-
-			newsp = (unsigned long *)registers[SP];
-			if (sp != newsp)
-				sp = memcpy(newsp, sp, 16 * 4);
-
-#endif
-			strcpy(output_buffer,"OK");
+			ptr = hex2mem(&input_buffer[1],
+				KGDB_USERREGS_START(&newregs),
+				    KGDB_USERREGS_BYTES, 0);
+			if (ptr) {
+			    memcpy(KGDB_USERREGS_START(regs),
+				    KGDB_USERREGS_START(&newregs),
+				    KGDB_USERREGS_BYTES);
+			    strcpy(output_buffer,"OK");
+			}
+			else strcpy(output_buffer,"ENN");
 		 }
 		break;
 
@@ -655,9 +681,11 @@ void handle_exception (struct gdb_regs *regs)
 
 
 		/*
-		 * kill the program
+		 * kill the program or detach
 		 */
 		case 'k' :
+		case 'D' :
+			return;
 			break;		/* do nothing */
 
 
@@ -671,6 +699,8 @@ void handle_exception (struct gdb_regs *regs)
 		/*
 		 * Step to next instruction
 		 * FIXME: Needs to be written
+		 * XXXX - gdb should write a bkpt instr, and continue.
+		 *        why does the kernel need a single step? (cj)
 		 */
 		case 's':
 			strcpy (output_buffer, "S01");
@@ -719,7 +749,6 @@ void handle_exception (struct gdb_regs *regs)
 #endif
 		}
 		break;
-
 		}			/* switch */
 
 		/*

@@ -1,8 +1,8 @@
-/* $Id: isdn_common.h,v 1.2 1997/11/29 02:01:37 davem Exp $
+/* $Id: isdn_common.h,v 1.3 1999/07/07 05:56:10 thockin Exp $
 
  * header for Linux ISDN subsystem, common used functions and debugging-switches (linklevel).
  *
- * Copyright 1994,95,96 by Fritz Elfert (fritz@wuemaus.franken.de)
+ * Copyright 1994-1998  by Fritz Elfert (fritz@isdn4linux.de)
  * Copyright 1995,96    by Thinking Objects Software GmbH Wuerzburg
  * Copyright 1995,96    by Michael Hipp (Michael.Hipp@student.uni-tuebingen.de)
  *
@@ -21,8 +21,41 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_common.h,v $
- * Revision 1.2  1997/11/29 02:01:37  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:10  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.6.2.3  1998/11/05 22:11:50  fritz
+ * Changed mail-address.
+ *
+ * Revision 1.6.2.2  1998/10/25 15:48:10  fritz
+ * Misc bugfixes and adaptions to new HiSax
+ *
+ * Revision 1.6.2.1  1998/03/16 09:55:48  cal
+ * Merged in TimRu-patches. Still needs validation in conjunction with ABC-patches.
  *
  * Revision 1.6  1997/02/28 02:32:44  fritz
  * Cleanup: Moved some tty related stuff from isdn_common.c
@@ -63,6 +96,7 @@
 extern void isdn_MOD_INC_USE_COUNT(void);
 extern void isdn_MOD_DEC_USE_COUNT(void);
 extern void isdn_free_channel(int di, int ch, int usage);
+extern int isdn_command(isdn_ctrl *);
 extern void isdn_all_eaz(int di, int ch);
 extern int isdn_dc2minor(int di, int ch);
 extern void isdn_info_update(void);
@@ -74,11 +108,12 @@ extern int isdn_readbchan(int, int, u_char *, u_char *, int, int);
 extern int isdn_get_free_channel(int, int, int, int, int);
 extern int isdn_writebuf_skb_stub(int, int, struct sk_buff *);
 extern int register_isdn(isdn_if * i);
+extern void isdn_putlog(char *fmt, ...);
 #if (LINUX_VERSION_CODE < 0x020111)
 extern void isdn_export_syms(void);
 #else
 #define isdn_export_syms()
 #endif
-#if defined(ISDN_DEBUG_NET_DUMP) || defined(ISDN_DEBUG_MODEM_DUMP)
+#if defined(ISDN_DEBUG_NET_DUMP) || defined(ISDN_DEBUG_MODEM_DUMP) || defined(CONFIG_ISDN_TIMEOUT_RULES)
 extern void isdn_dumppkt(char *, u_char *, int, int);
 #endif

@@ -13,7 +13,7 @@
  * diskquota system. This implementation is not based on any BSD
  * kernel sourcecode.
  * 
- * Version: $Id: dquot.c,v 1.3 1998/06/13 10:59:57 davem Exp $
+ * Version: $Id: dquot.c,v 1.4 1999/05/31 23:44:37 cjohnson Exp $
  * 
  * Author:  Marco van Wieringen <mvw@mcs.ow.nl> <mvw@tnix.net>
  * 
@@ -1034,8 +1034,8 @@ asmlinkage int sys_quotactl(int cmd, const char *special, int id, caddr_t addr)
 		case Q_GETSTATS:
 			break;
 		case Q_GETQUOTA:
-			if (((type == USRQUOTA && current->uid != id) ||
-			     (type == GRPQUOTA && current->gid != id)) && !fsuser())
+			if (((type == USRQUOTA && current->euid != id) ||
+			     (type == GRPQUOTA && current->egid != id)) && !fsuser())
 				return(-EPERM);
 			break;
 		default:

@@ -244,6 +244,18 @@ extern inline unsigned long get_free_page(int priority)
 	return page;
 }
 
+/*
+ * Routines to reserve physical memory - boost min_free_pages and
+ * friends so that physical resources will be available during
+ * interrupt surges when the pager can't run.
+ *
+ * phys_reserve returns 0 on falure (arbitrary 25% max is exceeded).
+ * Otherwise the return value is passed to phys_unreserve() when the
+ * memory is unreserved (eg. when the driver is unloaded.)
+ */
+extern void *phys_reserve(int bytes);
+extern void phys_unreserve(void *cookie, int bytes);
+
 /* memory.c & swap.c*/
 
 #define free_page(addr) free_pages((addr),0)
@@ -297,6 +309,7 @@ extern unsigned long get_unmapped_area(unsigned long, unsigned long);
 extern unsigned long page_unuse(unsigned long);
 extern int shrink_mmap(int, int, int);
 extern void truncate_inode_pages(struct inode *, unsigned long);
+
 
 #define GFP_BUFFER	0x00
 #define GFP_ATOMIC	0x01

@@ -8,7 +8,7 @@
  * License.  See the file COPYING in the main directory of this archive
  * for more details.
  *
- * $Id: bootinfo.h,v 1.4 1999/02/25 04:29:08 cjohnson Exp $
+ * $Id: bootinfo.h,v 1.5 1999/03/26 03:56:11 cjohnson Exp $
  */
 #ifndef __ASM_MIPS_BOOTINFO_H
 #define __ASM_MIPS_BOOTINFO_H
@@ -29,7 +29,7 @@
 #define MACH_GROUP_COBALT       7 /* Cobalt servers		 	      */
 
 #define GROUP_NAMES { "unknown", "Jazz", "Digital", "ARC", \
-                      "SNI", "ACN", "SGI", "Cobalt" }
+                      "SNI", "ACN", "SGI", "Cobalt Networks" }
 
 /*
  * Valid machtype values for group unknown (low order halfword of mips_machtype)
@@ -90,7 +90,7 @@
  */
 #define MACH_COBALT_27 		 0	/* Proto "27" hardware */
 
-#define GROUP_COBALT_NAMES { "Cobalt Networks" }
+#define GROUP_COBALT_NAMES { "Server" }
 
 /*
  * Valid cputype values

@@ -9,18 +9,18 @@
 /* one msqid structure for each queue on the system */
 struct msqid_ds {
     struct ipc_perm msg_perm;
-    struct msg *msg_first;  /* first message on queue */
-    struct msg *msg_last;   /* last message in queue */
-    time_t msg_stime;       /* last msgsnd time */
-    time_t msg_rtime;       /* last msgrcv time */
-    time_t msg_ctime;       /* last change time */
+    struct msg *msg_first;  		/* first message on queue */
+    struct msg *msg_last;   		/* last message in queue */
+    __kernel_time_t msg_stime;       	/* last msgsnd time */
+    __kernel_time_t msg_rtime;       	/* last msgrcv time */
+    __kernel_time_t msg_ctime;       	/* last change time */
     struct wait_queue *wwait;
     struct wait_queue *rwait;
-    ushort msg_cbytes;      /* current number of bytes on queue */
-    ushort msg_qnum;        /* number of messages in queue */
-    ushort msg_qbytes;      /* max number of bytes on queue */
-    ushort msg_lspid;       /* pid of last msgsnd */
-    ushort msg_lrpid;       /* last receive pid */
+    ushort msg_cbytes;      		/* current number of bytes on queue */
+    ushort msg_qnum;        		/* number of messages in queue */
+    ushort msg_qbytes;      		/* max number of bytes on queue */
+    __kernel_ipc_pid_t msg_lspid;       /* pid of last msgsnd */
+    __kernel_ipc_pid_t msg_lrpid;       /* last receive pid */
 };
 
 /* message buffer for msgsnd and msgrcv calls */

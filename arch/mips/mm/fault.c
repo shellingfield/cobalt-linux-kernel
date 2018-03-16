@@ -133,6 +133,19 @@ bad_area:
 		return;
 	}
 
+#ifdef CONFIG_REMOTE_DEBUG
+	{
+	    extern int debugmem_got_flt;
+	    extern int debugmem_flt_set;
+
+	    if (debugmem_flt_set) {
+		debugmem_got_flt = 1;	/* If an instruction offends thee, */
+		regs->cp0_epc += 4;	/* pluck it out. */	
+		return;
+	    }
+	}
+#endif
+
 	/*
 	 * Oops. The kernel tried to access some bad page. We'll have to
 	 * terminate things with extreme prejudice.
@@ -140,6 +153,18 @@ bad_area:
 	printk(KERN_ALERT "Unable to handle kernel paging request at virtual "
 	       "address %08lx, epc == %08lx, ra == %08lx\n",
 	       address, regs->cp0_epc, regs->regs[31]);
+
+#ifdef CONFIG_REMOTE_DEBUG
+	{
+		void set_debug_traps(void);
+		void breakpoint(void);
+
+		printk("Entering kernel debugger\n");
+
+		set_debug_traps();
+		breakpoint();
+	}
+#endif
 	die_if_kernel("Oops", regs, writeaccess);
 	do_exit(SIGKILL);
 }

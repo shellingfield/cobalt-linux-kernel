@@ -1,4 +1,4 @@
-/* $Id: isdn_ppp.c,v 1.2 1997/11/29 02:01:37 davem Exp $
+/* $Id: isdn_ppp.c,v 1.3 1999/07/07 05:56:11 thockin Exp $
  *
  * Linux ISDN subsystem, functions for synchronous PPP (linklevel).
  *
@@ -19,8 +19,40 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_ppp.c,v $
- * Revision 1.2  1997/11/29 02:01:37  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:11  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.28.2.2  1998/11/03 14:31:23  fritz
+ * Reduced stack usage in various functions.
+ * Adapted statemachine to work with certified HiSax.
+ * Some fixes in callback handling.
+ *
+ * Revision 1.28.2.1  1998/03/16 09:56:02  cal
+ * Merged in TimRu-patches. Still needs validation in conjunction with ABC-patches.
  *
  * Revision 1.28  1997/06/17 13:05:57  hipp
  * Applied Eric's underflow-patches (slightly modified)
@@ -176,7 +208,7 @@ static int isdn_ppp_fill_mpqueue(isdn_net_dev *, struct sk_buff **skb,
 static void isdn_ppp_free_mpqueue(isdn_net_dev *);
 #endif
 
-char *isdn_ppp_revision = "$Revision: 1.2 $";
+char *isdn_ppp_revision = "$Revision: 1.3 $";
 
 static struct ippp_struct *ippp_table[ISDN_MAX_CHANNELS];
 static struct isdn_ppp_compressor *ipc_head = NULL;
@@ -200,7 +232,7 @@ isdn_ppp_frame_log(char *info, char *data, int len, int maxlen)
 	for (i = 0, cnt = 0; cnt < maxlen; i++) {
 		for (j = 0; j < 16 && cnt < maxlen; j++, cnt++)
 			sprintf(buf + j * 3, "%02x ", (unsigned char) data[cnt]);
-		printk(KERN_DEBUG "%s[%d]: %s\n", info, i, buf);
+		isdn_putlog(KERN_DEBUG "%s[%d]: %s\n", info, i, buf);
 	}
 }
 
@@ -248,7 +280,7 @@ isdn_ppp_free(isdn_net_local * lp)
 
 
 	if (is->debug & 0x1)
-		printk(KERN_DEBUG "isdn_ppp_free %d %lx %lx\n", lp->ppp_slot, (long) lp, (long) is->lp);
+		isdn_putlog(KERN_DEBUG "isdn_ppp_free %d %lx %lx\n", lp->ppp_slot, (long) lp, (long) is->lp);
 
 	is->lp = NULL;          /* link is down .. set lp to NULL */
 #ifdef ISDN_SYNCPPP_READDRESS
@@ -304,12 +336,12 @@ isdn_ppp_bind(isdn_net_local * lp)
 
 	if (i >= ISDN_MAX_CHANNELS) {
 		restore_flags(flags);
-		printk(KERN_WARNING "isdn_ppp_bind: Can't find usable ippp device.\n");
+		isdn_putlog(KERN_WARNING "isdn_ppp_bind: Can't find usable ippp device.\n");
 		return -1;
 	}
 	unit = isdn_ppp_if_get_unit(lp->name);	/* get unit number from interface name .. ugly! */
 	if (unit < 0) {
-		printk(KERN_ERR "isdn_ppp_bind: illegal interface name %s.\n", lp->name);
+		isdn_putlog(KERN_ERR "isdn_ppp_bind: illegal interface name %s.\n", lp->name);
 		return -1;
 	}
 	lp->ppp_slot = i;
@@ -396,7 +428,7 @@ isdn_ppp_open(int min, struct file *file)
 	is = file->private_data = ippp_table[slot];
 
 	if (is->debug & 0x1)
-		printk(KERN_DEBUG "ippp, open, slot: %d, minor: %d, state: %04x\n", slot, min, is->state);
+		isdn_putlog(KERN_DEBUG "ippp, open, slot: %d, minor: %d, state: %04x\n", slot, min, is->state);
 
 	/* compression stuff */
 	is->compressor = NULL;
@@ -445,7 +477,7 @@ isdn_ppp_release(int min, struct file *file)
 	is = file->private_data;
 
 	if (is->debug & 0x1)
-		printk(KERN_DEBUG "ippp: release, minor: %d %lx\n", min, (long) is->lp);
+		isdn_putlog(KERN_DEBUG "ippp: release, minor: %d %lx\n", min, (long) is->lp);
 
 	if (is->lp) {           /* a lp address says: this link is still up */
 		isdn_net_dev *p = is->lp->netdev;
@@ -521,7 +553,7 @@ isdn_ppp_ioctl(int min, struct file *file, unsigned int cmd, unsigned long arg)
 	lp = is->lp;
 
 	if (is->debug & 0x1)
-		printk(KERN_DEBUG "isdn_ppp_ioctl: minor: %d cmd: %x state: %x\n", min, cmd, is->state);
+		isdn_putlog(KERN_DEBUG "isdn_ppp_ioctl: minor: %d cmd: %x state: %x\n", min, cmd, is->state);
 
 	if (!(is->state & IPPP_OPEN))
 		return -EINVAL;
@@ -533,7 +565,7 @@ isdn_ppp_ioctl(int min, struct file *file, unsigned int cmd, unsigned long arg)
 				return -EINVAL;
 			if ((r = get_arg((void *) arg, &val, 0)))
 				return r;
-			printk(KERN_DEBUG "iPPP-bundle: minor: %d, slave unit: %d, master unit: %d\n",
+			isdn_putlog(KERN_DEBUG "iPPP-bundle: minor: %d, slave unit: %d, master unit: %d\n",
 			       (int) min, (int) is->unit, (int) val);
 			return isdn_ppp_bundle(is, val);
 #else
@@ -599,12 +631,12 @@ isdn_ppp_ioctl(int min, struct file *file, unsigned int cmd, unsigned long arg)
 				struct slcompress *sltmp;
 #endif
 				if (is->debug & 0x1)
-					printk(KERN_DEBUG "ippp, ioctl: changed MAXCID to %ld\n", val);
+					isdn_putlog(KERN_DEBUG "ippp, ioctl: changed MAXCID to %ld\n", val);
 				is->maxcid = val;
 #ifdef CONFIG_ISDN_PPP_VJ
 				sltmp = slhc_init(16, val);
 				if (!sltmp) {
-					printk(KERN_ERR "ippp, can't realloc slhc struct\n");
+					isdn_putlog(KERN_ERR "ippp, can't realloc slhc struct\n");
 					return -ENOMEM;
 				}
 				if (is->slcomp)
@@ -641,23 +673,28 @@ isdn_ppp_ioctl(int min, struct file *file, unsigned int cmd, unsigned long arg)
 			break;
 		case PPPIOCGCALLINFO:
 			{
-				struct pppcallinfo pci;
-				memset((char *) &pci,0,sizeof(struct pppcallinfo));
+				struct pppcallinfo *pci;
+
+				if ((pci = (struct pppcallinfo *)kmalloc(sizeof(struct pppcallinfo), GFP_KERNEL)) == NULL)
+					return -ENOMEM;
+				memset((char *) pci,0,sizeof(struct pppcallinfo));
 				if(lp)
 				{
-					strncpy(pci.local_num,lp->msn,63);
+					strncpy(pci->local_num,lp->msn,63);
 					if(lp->dial) {
-						strncpy(pci.remote_num,lp->dial->num,63);
+						strncpy(pci->remote_num,lp->dial->num,63);
 					}
-					pci.charge_units = lp->charge;
+					pci->charge_units = lp->charge;
 					if(lp->outgoing)
-						pci.calltype = CALLTYPE_OUTGOING;
+						pci->calltype = CALLTYPE_OUTGOING;
 					else
-						pci.calltype = CALLTYPE_INCOMING;
+						pci->calltype = CALLTYPE_INCOMING;
 					if(lp->flags & ISDN_NET_CALLBACK)
-						pci.calltype |= CALLTYPE_CALLBACK;
+						pci->calltype |= CALLTYPE_CALLBACK;
 				}
-				return set_arg((void *)arg,sizeof(struct pppcallinfo),&pci);
+				r = set_arg((void *)arg,sizeof(struct pppcallinfo),pci);
+				kfree(pci);
+				return r;
 			}
 		default:
 			break;
@@ -677,7 +714,7 @@ isdn_ppp_select(int min, struct file *file, int type, select_table * st)
 	is = file->private_data;
 
 	if (is->debug & 0x2)
-		printk(KERN_DEBUG "isdn_ppp_select: minor: %d, type: %d \n", min, type);
+		isdn_putlog(KERN_DEBUG "isdn_ppp_select: minor: %d, type: %d \n", min, type);
 
 	if (!(is->state & IPPP_OPEN))
 		return -EINVAL;
@@ -721,12 +758,12 @@ isdn_ppp_poll(struct file *file, poll_table * wait)
 	is = file->private_data;
 
 	if (is->debug & 0x2)
-		printk(KERN_DEBUG "isdn_ppp_poll: minor: %d\n", MINOR(file->f_inode->i_rdev));
+		isdn_putlog(KERN_DEBUG "isdn_ppp_poll: minor: %d\n", MINOR(file->f_inode->i_rdev));
 
 	poll_wait(&is->wq, wait);
 
 	if (!(is->state & IPPP_OPEN)) {
-		printk(KERN_DEBUG "isdn_ppp: device not open\n");
+		isdn_putlog(KERN_DEBUG "isdn_ppp: device not open\n");
 		return POLLERR;
 	}
 	/* we're always ready to send .. */
@@ -763,18 +800,18 @@ isdn_ppp_fill_rq(unsigned char *buf, int len, int proto, int slot)
 	struct ippp_struct *is;
 
 	if (slot < 0 || slot >= ISDN_MAX_CHANNELS) {
-		printk(KERN_WARNING "ippp: illegal slot.\n");
+		isdn_putlog(KERN_WARNING "ippp: illegal slot.\n");
 		return 0;
 	}
 	is = ippp_table[slot];
 
 	if (!(is->state & IPPP_CONNECT)) {
-		printk(KERN_DEBUG "ippp: device not activated.\n");
+		isdn_putlog(KERN_DEBUG "ippp: device not activated.\n");
 		return 0;
 	}
 	nbuf = (unsigned char *) kmalloc(len + 4, GFP_ATOMIC);
 	if (!nbuf) {
-		printk(KERN_WARNING "ippp: Can't alloc buf\n");
+		isdn_putlog(KERN_WARNING "ippp: Can't alloc buf\n");
 		return 0;
 	}
 	nbuf[0] = PPP_ALLSTATIONS;
@@ -790,7 +827,7 @@ isdn_ppp_fill_rq(unsigned char *buf, int len, int proto, int slot)
 	bl = is->last;
 
 	if (bf == bl) {
-		printk(KERN_WARNING "ippp: Queue is full; discarding first buffer\n");
+		isdn_putlog(KERN_WARNING "ippp: Queue is full; discarding first buffer\n");
 		bf = bf->next;
 		kfree(bf->buf);
 		is->first = bf;
@@ -873,7 +910,7 @@ isdn_ppp_write(int min, struct file *file, const char *buf, int count)
 	/* -> push it directly to the lowlevel interface */
 
 	if (!lp)
-		printk(KERN_DEBUG "isdn_ppp_write: lp == NULL\n");
+		isdn_putlog(KERN_DEBUG "isdn_ppp_write: lp == NULL\n");
 	else {
 		/*
 		 * Don't reset huptimer for
@@ -888,28 +925,30 @@ isdn_ppp_write(int min, struct file *file, const char *buf, int count)
 		if (lp->isdn_device < 0 || lp->isdn_channel < 0)
 			return 0;
 
-		if (dev->drv[lp->isdn_device]->running && lp->dialstate == 0 &&
+		if ((dev->drv[lp->isdn_device]->flags & DRV_FLAG_RUNNING) &&
+			lp->dialstate == 0 &&
 		    (lp->flags & ISDN_NET_CONNECTED)) {
 			int cnt;
 			struct sk_buff *skb;
 			skb = dev_alloc_skb(count);
 			if (!skb) {
-				printk(KERN_WARNING "isdn_ppp_write: out of memory!\n");
+				isdn_putlog(KERN_WARNING "isdn_ppp_write: out of memory!\n");
 				return count;
 			}
 			SET_SKB_FREE(skb);
 			if (copy_from_user(skb_put(skb, count), buf, count))
 				return -EFAULT;
 			if (is->debug & 0x40) {
-				printk(KERN_DEBUG "ppp xmit: len %d\n", (int) skb->len);
+				isdn_putlog(KERN_DEBUG "ppp xmit: len %d\n", (int) skb->len);
 				isdn_ppp_frame_log("xmit", skb->data, skb->len, 32);
 			}
+
 			if ((cnt = isdn_writebuf_skb_stub(lp->isdn_device, lp->isdn_channel, skb)) != count) {
 				if (lp->sav_skb) {
 					dev_kfree_skb(lp->sav_skb, FREE_WRITE);
-					printk(KERN_INFO "isdn_ppp_write: freeing sav_skb (%d,%d)!\n", cnt, count);
+					isdn_putlog(KERN_INFO "isdn_ppp_write: freeing sav_skb (%d,%d)!\n", cnt, count);
 				} else
-					printk(KERN_INFO "isdn_ppp_write: Can't write PPP frame to LL (%d,%d)!\n", cnt, count);
+					isdn_putlog(KERN_INFO "isdn_ppp_write: Can't write PPP frame to LL (%d,%d)!\n", cnt, count);
 				lp->sav_skb = skb;
 			}
 		}
@@ -930,7 +969,7 @@ isdn_ppp_init(void)
 	for (i = 0; i < ISDN_MAX_CHANNELS; i++) {
 		if (!(ippp_table[i] = (struct ippp_struct *)
 		      kmalloc(sizeof(struct ippp_struct), GFP_KERNEL))) {
-			printk(KERN_WARNING "isdn_ppp_init: Could not alloc ippp_table\n");
+			isdn_putlog(KERN_WARNING "isdn_ppp_init: Could not alloc ippp_table\n");
 			for (j = 0; j < i; j++)
 				kfree(ippp_table[i]);
 			return -1;
@@ -987,11 +1026,11 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 	is = ippp_table[lp->ppp_slot];
 
 	if (is->debug & 0x4) {
-		printk(KERN_DEBUG "ippp_receive: len: %d\n", (int) skb->len);
+		isdn_putlog(KERN_DEBUG "ippp_receive: len: %d\n", (int) skb->len);
 		isdn_ppp_frame_log("receive", skb->data, skb->len, 32);
 	}
 	if (net_dev->local.master) {
-		printk(KERN_WARNING "isdn_ppp_receice: net_dev != master\n");
+		isdn_putlog(KERN_WARNING "isdn_ppp_receice: net_dev != master\n");
 		net_dev = ((isdn_net_local *) net_dev->local.master->priv)->netdev;
 	}
 	if (skb->data[0] == 0xff && skb->data[1] == 0x03)
@@ -1009,7 +1048,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 		int sqno_end;
 		
 		if(proto == PPP_LINK_COMP) {
-			printk(KERN_DEBUG "received single link compressed frame\n");
+			isdn_putlog(KERN_DEBUG "received single link compressed frame\n");
 			skb = isdn_ppp_decompress(skb,is,NULL);
 			if(!skb)
 				return;
@@ -1022,7 +1061,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 
 			u_char BEbyte = skb->data[0];
 			if (is->debug & 0x8)
-				printk(KERN_DEBUG "recv: %d/%04x/%d -> %02x %02x %02x %02x %02x %02x\n", lp->ppp_slot, proto,
+				isdn_putlog(KERN_DEBUG "recv: %d/%04x/%d -> %02x %02x %02x %02x %02x %02x\n", lp->ppp_slot, proto,
 				       (int) skb->len, (int) skb->data[0], (int) skb->data[1], (int) skb->data[2],
 				       (int) skb->data[3], (int) skb->data[4], (int) skb->data[5]);
 			if (!(is->mpppcfg & SC_IN_SHORT_SEQ)) {
@@ -1040,7 +1079,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 			if ((tseq = is->last_link_seqno) >= sqno) {
 				int range = is->range;
 				if (tseq + 1024 < range + sqno)	/* redundancy check .. not MP conform */
-					printk(KERN_WARNING "isdn_ppp_receive, MP, detected overflow with sqno: %ld, last: %ld !!!\n", sqno, tseq);
+					isdn_putlog(KERN_WARNING "isdn_ppp_receive, MP, detected overflow with sqno: %ld, last: %ld !!!\n", sqno, tseq);
 				else {
 					sqno += range;
 					is->last_link_seqno = sqno;
@@ -1089,7 +1128,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 			if ((BEbyte & (MP_BEGIN_FRAG | MP_END_FRAG)) != (MP_BEGIN_FRAG | MP_END_FRAG)) {
 				static int dmes = 0;
 				if( !dmes ) {
-					printk(KERN_DEBUG "ippp: trying ;) to fill mp_queue %d .. UNTESTED!!\n", lp->ppp_slot);
+					isdn_putlog(KERN_DEBUG "ippp: trying ;) to fill mp_queue %d .. UNTESTED!!\n", lp->ppp_slot);
 					dmes = 1;
 				}
 				if ((sqno_end = isdn_ppp_fill_mpqueue(net_dev, &skb, BEbyte, &sqno, min_sqno)) < 0) {
@@ -1102,7 +1141,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 				sqno_end = sqno;
 
 			if (is->debug & 0x40)
-				printk(KERN_DEBUG "min_sqno: %ld sqno_end %d next: %ld\n", min_sqno, sqno_end, net_dev->ib.next_num);
+				isdn_putlog(KERN_DEBUG "min_sqno: %ld sqno_end %d next: %ld\n", min_sqno, sqno_end, net_dev->ib.next_num);
 
 			/*
 			 * MP buffer management .. reorders incoming packets ..
@@ -1121,7 +1160,7 @@ void isdn_ppp_receive(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buf
 				q = (struct sqqueue *) kmalloc(sizeof(struct sqqueue), GFP_ATOMIC);
 				if (!q) {
 					net_dev->ib.modify = 0;
-					printk(KERN_WARNING "ippp/MPPP: Bad! Can't alloc sq node!\n");
+					isdn_putlog(KERN_WARNING "ippp/MPPP: Bad! Can't alloc sq node!\n");
 					SET_SKB_FREE(skb);
 					dev_kfree_skb(skb, 0 /* FREE_READ */ );
 					return;	/* discard */
@@ -1175,7 +1214,7 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 	struct ippp_struct *is = ippp_table[lp->ppp_slot];
 
 	if (is->debug & 0x10) {
-		printk(KERN_DEBUG "push, skb %d %04x\n", (int) skb->len, proto);
+		isdn_putlog(KERN_DEBUG "push, skb %d %04x\n", (int) skb->len, proto);
 		isdn_ppp_frame_log("rpush", skb->data, skb->len, 32);
 	}
 
@@ -1192,7 +1231,7 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 	switch (proto) {
 		case PPP_IPX:  /* untested */
 			if (is->debug & 0x20)
-				printk(KERN_DEBUG "isdn_ppp: IPX\n");
+				isdn_putlog(KERN_DEBUG "isdn_ppp: IPX\n");
 			skb->dev = dev;
 			skb->mac.raw = skb->data;
 			skb->protocol = htons(ETH_P_IPX);
@@ -1200,9 +1239,9 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 #ifdef CONFIG_ISDN_PPP_VJ
 		case PPP_VJC_UNCOMP:
 			if (is->debug & 0x20)
-				printk(KERN_DEBUG "isdn_ppp: VJC_UNCOMP\n");
+				isdn_putlog(KERN_DEBUG "isdn_ppp: VJC_UNCOMP\n");
 			if (slhc_remember(ippp_table[net_dev->local.ppp_slot]->slcomp, skb->data, skb->len) <= 0) {
-				printk(KERN_WARNING "isdn_ppp: received illegal VJC_UNCOMP frame!\n");
+				isdn_putlog(KERN_WARNING "isdn_ppp: received illegal VJC_UNCOMP frame!\n");
 				net_dev->local.stats.rx_dropped++;
 				SET_SKB_FREE(skb);
 				dev_kfree_skb(skb, 0 /* FREE_READ */ );
@@ -1211,14 +1250,14 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 #endif
 		case PPP_IP:
 			if (is->debug & 0x20)
-				printk(KERN_DEBUG "isdn_ppp: IP\n");
+				isdn_putlog(KERN_DEBUG "isdn_ppp: IP\n");
 			skb->dev = dev;
 			skb->mac.raw = skb->data;
 			skb->protocol = htons(ETH_P_IP);
 			break;
 		case PPP_VJC_COMP:
 			if (is->debug & 0x20)
-				printk(KERN_DEBUG "isdn_ppp: VJC_COMP\n");
+				isdn_putlog(KERN_DEBUG "isdn_ppp: VJC_COMP\n");
 #ifdef CONFIG_ISDN_PPP_VJ
 			{
 				struct sk_buff *skb_old = skb;
@@ -1228,7 +1267,7 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 				SET_SKB_FREE(skb_old);
 
 				if (!skb) {
-					printk(KERN_WARNING "%s: Memory squeeze, dropping packet.\n", dev->name);
+					isdn_putlog(KERN_WARNING "%s: Memory squeeze, dropping packet.\n", dev->name);
 					net_dev->local.stats.rx_dropped++;
 					dev_kfree_skb(skb_old, 0 /* FREE_READ */ );
 					return;
@@ -1250,7 +1289,7 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 				skb->protocol = htons(ETH_P_IP);
 			}
 #else
-			printk(KERN_INFO "isdn: Ooopsa .. VJ-Compression support not compiled into isdn driver.\n");
+			isdn_putlog(KERN_INFO "isdn: Ooopsa .. VJ-Compression support not compiled into isdn driver.\n");
 			lp->stats.rx_dropped++;
 			SET_SKB_FREE(skb);
 			dev_kfree_skb(skb, 0 /* FREE_READ */ );
@@ -1267,10 +1306,10 @@ isdn_ppp_push_higher(isdn_net_dev * net_dev, isdn_net_local * lp, struct sk_buff
 			return;
 	}
 
-	netif_rx(skb);
-	/* net_dev->local.stats.rx_packets++; *//* done in isdn_net.c */
 	/* Reset hangup-timer */
 	lp->huptimer = 0;
+	netif_rx(skb);
+	/* net_dev->local.stats.rx_packets++; *//* done in isdn_net.c */
 
 	return;
 }
@@ -1285,7 +1324,7 @@ static unsigned char *isdn_ppp_skb_push(struct sk_buff **skb_p,int len)
 	struct sk_buff *skb = *skb_p;
 
 	if(skb_headroom(skb) < len) {
-		printk(KERN_ERR "isdn_ppp_skb_push:under %d %d\n",skb_headroom(skb),len);
+		isdn_putlog(KERN_ERR "isdn_ppp_skb_push:under %d %d\n",skb_headroom(skb),len);
 		dev_kfree_skb(skb,FREE_WRITE);
 		return NULL;
 	}
@@ -1327,7 +1366,7 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 			ipts->old_pa_dstaddr = mdev->pa_dstaddr;
 #endif
 		if (ipts->debug & 0x1)
-			printk(KERN_INFO "%s: IP frame delayed.\n", dev->name);
+			isdn_putlog(KERN_INFO "%s: IP frame delayed.\n", dev->name);
 		return 1;
 	}
 
@@ -1339,10 +1378,10 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 				struct iphdr *ipfr;
 				ipfr = (struct iphdr *) skb->data;
 				if(ipts->debug & 0x4)
-					printk(KERN_DEBUG "IF-address changed from %lx to %lx\n", ipts->old_pa_addr, mdev->pa_addr);
+					isdn_putlog(KERN_DEBUG "IF-address changed from %lx to %lx\n", ipts->old_pa_addr, mdev->pa_addr);
 				if (ipfr->version == 4) {
 					if (ipfr->saddr == ipts->old_pa_addr) {
-						printk(KERN_DEBUG "readdressing %lx to %lx\n", ipfr->saddr, mdev->pa_addr);
+						isdn_putlog(KERN_DEBUG "readdressing %lx to %lx\n", ipfr->saddr, mdev->pa_addr);
 						ipfr->saddr = mdev->pa_addr;
 					}
 				}
@@ -1355,7 +1394,7 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 			break;
 		default:
 			dev_kfree_skb(skb, FREE_WRITE);
-			printk(KERN_ERR "isdn_ppp: skipped frame with unsupported protocoll: %#x.\n", skb->protocol);
+			isdn_putlog(KERN_ERR "isdn_ppp: skipped frame with unsupported protocoll: %#x.\n", skb->protocol);
 			return 0;
 	}
 
@@ -1379,14 +1418,14 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 	 */
 
 	/* Pull off the fake header we stuck on earlier to keep
-     * the fragemntation code happy.
-     * this will break the ISDN_SYNCPPP_READDRESS hack a few lines
-     * above. So, enabling this is no longer allowed
-     */
+	 * the fragemntation code happy.
+	 * this will break the ISDN_SYNCPPP_READDRESS hack a few lines
+	 * above. So, enabling this is no longer allowed
+	 */
 	skb_pull(skb,IPPP_MAX_HEADER);
 
 	if (ipt->debug & 0x4)
-		printk(KERN_DEBUG "xmit skb, len %d\n", (int) skb->len);
+		isdn_putlog(KERN_DEBUG "xmit skb, len %d\n", (int) skb->len);
 
 #ifdef CONFIG_ISDN_PPP_VJ
 	if (proto == PPP_IP && ipts->pppcfg & SC_COMP_TCP) {	/* ipts here? probably yes, but check this again */
@@ -1407,7 +1446,7 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 
 			if (buf != skb->data) {	
 				if (new_skb->data != buf)
-					printk(KERN_ERR "isdn_ppp: FATAL error after slhc_compress!!\n");
+					isdn_putlog(KERN_ERR "isdn_ppp: FATAL error after slhc_compress!!\n");
 				dev_kfree_skb(skb, FREE_WRITE);
 				skb = new_skb;
 			} else {
@@ -1427,13 +1466,13 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 	}
 #endif
 
-    /*
-     * normal or bundle compression
-     */
+	/*
+	 * normal or bundle compression
+	 */
 	skb = isdn_ppp_compress(skb,&proto,ipt,ipts,0);
 
 	if (ipt->debug & 0x24)
-		printk(KERN_DEBUG "xmit2 skb, len %d, proto %04x\n", (int) skb->len, proto);
+		isdn_putlog(KERN_DEBUG "xmit2 skb, len %d, proto %04x\n", (int) skb->len, proto);
 
 #ifdef CONFIG_ISDN_MPP
 	if (ipt->mpppcfg & SC_MP_PROT) {
@@ -1492,12 +1531,12 @@ isdn_ppp_xmit(struct sk_buff *skb, struct device *dev)
 	/* tx-stats are now updated via BSENT-callback */
 
 	if (ipts->debug & 0x40) {
-		printk(KERN_DEBUG "skb xmit: len: %d\n", (int) skb->len);
+		isdn_putlog(KERN_DEBUG "skb xmit: len: %d\n", (int) skb->len);
 		isdn_ppp_frame_log("xmit", skb->data, skb->len, 32);
 	}
 	if (isdn_net_send_skb(dev, lp, skb)) {
 		if (lp->sav_skb) {	/* whole sav_skb processing with disabled IRQs ?? */
-			printk(KERN_ERR "%s: whoops .. there is another stored skb!\n", dev->name);
+			isdn_putlog(KERN_ERR "%s: whoops .. there is another stored skb!\n", dev->name);
 			dev_kfree_skb(skb, FREE_WRITE);
 		} else
 			lp->sav_skb = skb;
@@ -1578,7 +1617,7 @@ isdn_ppp_bundle(struct ippp_struct *is, int unit)
 	    (SC_MP_PROT | SC_REJ_MP_PROT | SC_OUT_SHORT_SEQ | SC_IN_SHORT_SEQ);
 #if 0
 	if (ippp_table[nlp->ppp_slot]->mpppcfg != ippp_table[lp->ppp_slot]->mpppcfg) {
-		printk(KERN_WARNING "isdn_ppp_bundle: different MP options %04x and %04x\n",
+		isdn_putlog(KERN_WARNING "isdn_ppp_bundle: different MP options %04x and %04x\n",
 		       ippp_table[nlp->ppp_slot]->mpppcfg, ippp_table[lp->ppp_slot]->mpppcfg);
 	}
 #endif
@@ -1612,7 +1651,7 @@ isdn_ppp_fill_mpqueue(isdn_net_dev * dev, struct sk_buff **skb, int BEbyte, long
 
 	q1 = (struct mpqueue *) kmalloc(sizeof(struct mpqueue), GFP_ATOMIC);
 	if (!q1) {
-		printk(KERN_WARNING "isdn_ppp_fill_mpqueue: Can't alloc struct memory.\n");
+		isdn_putlog(KERN_WARNING "isdn_ppp_fill_mpqueue: Can't alloc struct memory.\n");
 		save_flags(flags);
 		cli();
 		isdn_ppp_cleanup_mpqueue(dev, min_sqno);
@@ -1647,7 +1686,7 @@ isdn_ppp_fill_mpqueue(isdn_net_dev * dev, struct sk_buff **skb, int BEbyte, long
 			break;
 		}
 		if (sqno == q->sqno)
-			printk(KERN_WARNING "isdn_fill_mpqueue: illegal sqno received!!\n");
+			isdn_putlog(KERN_WARNING "isdn_fill_mpqueue: illegal sqno received!!\n");
 		q1->last = q->last;
 		q1->next = q;
 		if (q->last) {
@@ -1743,7 +1782,7 @@ isdn_ppp_cleanup_sqqueue(isdn_net_dev * net_dev, isdn_net_local * lp, long min_s
 	while ((q = net_dev->ib.sq) && (q->sqno_start == net_dev->ib.next_num || q->sqno_end <= min_sqno)) {
 		int proto;
 		if (q->sqno_start != net_dev->ib.next_num) {
-			printk(KERN_DEBUG "ippp: MP, stepping over missing frame: %ld\n", net_dev->ib.next_num);
+			isdn_putlog(KERN_DEBUG "ippp: MP, stepping over missing frame: %ld\n", net_dev->ib.next_num);
 #ifdef CONFIG_ISDN_PPP_VJ
 			slhc_toss(ippp_table[net_dev->local.ppp_slot]->slcomp);
 #endif
@@ -1777,13 +1816,13 @@ isdn_ppp_cleanup_mpqueue(isdn_net_dev * dev, long min_sqno)
 	while(q && (q->sqno < min_sqno) ) {
 		if ( (q->BEbyte & MP_END_FRAG) || 
 			 (q->next && (q->next->sqno <= min_sqno) && (q->next->BEbyte & MP_BEGIN_FRAG)) ) {
-			printk(KERN_DEBUG "ippp: freeing stale packet(s), min_sq: %ld!\n",min_sqno);
+			isdn_putlog(KERN_DEBUG "ippp: freeing stale packet(s), min_sq: %ld!\n",min_sqno);
 			if ((dev->mp_last = q->next))
 				q->next->last = NULL;
 			while (q) {
 				ql = q->last;
 				SET_SKB_FREE(q->skb);
-				printk(KERN_DEBUG "ippp, freeing packet with sqno: %ld\n",q->sqno);
+				isdn_putlog(KERN_DEBUG "ippp, freeing packet with sqno: %ld\n",q->sqno);
 				dev_kfree_skb(q->skb, 0 /* FREE_READ */ );
 				kfree(q);
 #ifdef CONFIG_ISDN_PPP_VJ
@@ -1905,7 +1944,7 @@ isdn_ppp_dev_ioctl(struct device *dev, struct ifreq *ifr, int cmd)
 	isdn_net_local *lp = (isdn_net_local *) dev->priv;
 
 #if 0
-	printk(KERN_DEBUG "ippp, dev_ioctl: cmd %#08x , %d \n", cmd, lp->ppp_slot);
+	isdn_putlog(KERN_DEBUG "ippp, dev_ioctl: cmd %#08x , %d \n", cmd, lp->ppp_slot);
 #endif
 
 	if (lp->p_encap != ISDN_NET_ENCAP_SYNCPPP)
@@ -2022,7 +2061,7 @@ isdn_ppp_hangup_slave(char *name)
 static struct sk_buff *isdn_ppp_decompress(struct sk_buff *skb,struct ippp_struct *is,struct ippp_struct *master)
 {
 #if 1
-	printk(KERN_ERR "compression not included!\n");
+	isdn_putlog(KERN_ERR "compression not included!\n");
 	SET_SKB_FREE(skb);
 	dev_kfree_skb(skb,FREE_WRITE);
 	return NULL;
@@ -2032,13 +2071,13 @@ static struct sk_buff *isdn_ppp_decompress(struct sk_buff *skb,struct ippp_struc
 		 * single link compression 
 		 */
 		if(!is->link_compressor) {
-			printk(KERN_ERR "ippp: no (link) compressor defined!\n");
+			isdn_putlog(KERN_ERR "ippp: no (link) compressor defined!\n");
 			SET_SKB_FREE(skb);
 			dev_kfree_skb(skb,FREE_WRITE);
 			return NULL;
 		}
 		if(!is->link_decomp_stat) {
-			printk(KERN_DEBUG "ippp: initialize link compressor\n");
+			isdn_putlog(KERN_DEBUG "ippp: initialize link compressor\n");
 		}
 /*
 		-> decompress link
@@ -2049,7 +2088,7 @@ static struct sk_buff *isdn_ppp_decompress(struct sk_buff *skb,struct ippp_struc
 		 * 'normal' or bundle-compression 
 		 */
 		if(!master->compressor) {
-			printk(KERN_ERR "ippp: no (link) compressor defined!\n");
+			isdn_putlog(KERN_ERR "ippp: no (link) compressor defined!\n");
 			SET_SKB_FREE(skb);
 			dev_kfree_skb(skb,FREE_WRITE);
 			return NULL;
@@ -2058,7 +2097,7 @@ static struct sk_buff *isdn_ppp_decompress(struct sk_buff *skb,struct ippp_struc
 #if 0
 			master->decomp_stat = (master->compressor->decomp_alloc)( .. );
 #endif
-			printk(KERN_DEBUG "ippp: initialize compressor\n");
+			isdn_putlog(KERN_DEBUG "ippp: initialize compressor\n");
 		}
 	}
 	
@@ -2103,7 +2142,7 @@ static struct sk_buff *isdn_ppp_compress(struct sk_buff *skb_in,int *proto,
 	}
 
 	if(!compressor) {
-		printk(KERN_ERR "No compressor set!\n");
+		isdn_putlog(KERN_ERR "No compressor set!\n");
 		return skb_in;
 	}
 	if(!stat) {
@@ -2137,7 +2176,7 @@ static void isdn_ppp_receive_ccp(isdn_net_dev *net_dev, isdn_net_local *lp,
 	 struct sk_buff *skb)
 {
 #if 0
-	printk(KERN_DEBUG "isdn_ppp_receive_cpp: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+	isdn_putlog(KERN_DEBUG "isdn_ppp_receive_cpp: %02x %02x %02x %02x %02x %02x %02x %02x\n",
 		skb->data[0],skb->data[1],skb->data[2],skb->data[3],
 		skb->data[4],skb->data[5],skb->data[6],skb->data[7] );
 #endif

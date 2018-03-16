@@ -1,13 +1,46 @@
 /*
- * $Id: b1pci.c,v 1.1 1997/11/29 02:01:32 davem Exp $
+ * $Id: b1pci.c,v 1.2 1999/07/07 05:56:11 thockin Exp $
  * 
  * Module for AVM B1 PCI-card.
  * 
  * (c) Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: b1pci.c,v $
- * Revision 1.1  1997/11/29 02:01:32  davem
- * Merge to 2.0.32
+ * Revision 1.2  1999/07/07 05:56:11  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.2.2.2  1998/01/23 16:49:30  calle
+ * added functions for pcmcia cards,
+ * avmb1_addcard returns now the controller number.
+ *
+ * Revision 1.2.2.1  1997/11/26 10:46:57  calle
+ * prepared for M1 (Mobile) and T1 (PMX) cards.
+ * prepared to set configuration after load to support other D-channel
+ * protocols, point-to-point and leased lines.
  *
  * Revision 1.2  1997/05/18 09:24:13  calle
  * added verbose disconnect reason reporting to avmb1.
@@ -37,7 +70,7 @@
 #define PCI_DEVICE_ID_AVM_B1	0x700
 #endif
 
-static char *revision = "$Revision: 1.1 $";
+static char *revision = "$Revision: 1.2 $";
 
 /* ------------------------------------------------------------- */
 
@@ -101,13 +134,13 @@ int b1pci_init(void)
 		printk(KERN_INFO
 			"b1pci: PCI BIOS reports AVM-B1 at i/o %#x, irq %d\n",
 			ioaddr, irq);
-		if ((rc = avmb1_probecard(ioaddr, irq)) != 0) {
+		if ((rc = avmb1_probecard(ioaddr, irq, AVM_CARDTYPE_B1)) != 0) {
 		        printk(KERN_ERR
 			"b1pci: no AVM-B1 at i/o %#x, irq %d detected\n",
 			ioaddr, irq);
 			return rc;
 		}
-		if ((rc = avmb1_addcard(ioaddr, irq)) != 0)
+		if ((rc = avmb1_addcard(ioaddr, irq, AVM_CARDTYPE_B1)) < 0)
 			return rc;
 	}
 	return 0;

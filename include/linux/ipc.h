@@ -2,18 +2,17 @@
 #define _LINUX_IPC_H
 #include <linux/types.h>
 
-typedef int key_t; 		/* should go in <types.h> type for IPC key */
-#define IPC_PRIVATE ((key_t) 0)  
+#define IPC_PRIVATE ((__kernel_key_t) 0)  
 
 struct ipc_perm
 {
-  key_t  key;
-  ushort uid;   /* owner euid and egid */
-  ushort gid;
-  ushort cuid;  /* creator euid and egid */
-  ushort cgid;
-  ushort mode;  /* access modes see mode flags below */
-  ushort seq;   /* sequence number */
+  __kernel_key_t  key;
+  __kernel_uid_t  uid;	/* owner euid and egid */
+  __kernel_gid_t  gid;
+  __kernel_uid_t  cuid;	/* creator euid and egid */
+  __kernel_gid_t  cgid;
+  __kernel_mode_t mode;	/* access modes see mode flags below */
+  ushort seq;		/* sequence number */
 };
 
 

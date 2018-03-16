@@ -44,6 +44,7 @@
  */
 
 		mfc0	v0,CP0_STATUS
+		ori	v0,2
 		sw	v0,GDB_FR_STATUS(sp)
 		mfc0	v0,CP0_CAUSE
 		sw	v0,GDB_FR_CAUSE(sp)

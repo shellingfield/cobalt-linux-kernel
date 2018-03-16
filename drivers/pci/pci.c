@@ -188,6 +188,8 @@ struct pci_dev_info dev_info[] = {
 	DEVICE( OPTI,		OPTI_82C814,	"82C814 Firebridge 1"),
 	DEVICE( OPTI,		OPTI_82C822,	"82C822"),
 	DEVICE( OPTI,		OPTI_82C825,	"82C825 Firebridge 2"),
+	DEVICE( ELSA,		ELSA_QS1000,	"Quickstep 1000 ISDN"),
+	DEVICE( ELSA,		ELSA_QS3000,	"Quickstep 3000 ISDN"),
 	DEVICE( SGS,		SGS_2000,	"STG 2000X"),
 	DEVICE( SGS,		SGS_1764,	"STG 1764X"),
 	DEVICE( BUSLOGIC,	BUSLOGIC_MULTIMASTER_NC, "MultiMaster NC"),
@@ -317,6 +319,7 @@ struct pci_dev_info dev_info[] = {
 	DEVICE( REALTEK,	REALTEK_8129,	"8129"),
 	DEVICE( REALTEK,	REALTEK_8139,	"8139"),
 	DEVICE( TRUEVISION,	TRUEVISION_T1000,"TARGA 1000"),
+	DEVICE( IODATA,		IODATA_RSA_PCI,	"RSA-PCI"),
 	DEVICE( INIT,		INIT_320P,	"320 P"),
 	DEVICE( INIT,		INIT_360P,	"360 P"),
 	DEVICE( VIA,		VIA_82C505,	"VT 82C505"),
@@ -397,10 +400,11 @@ struct pci_dev_info dev_info[] = {
 	DEVICE( ZEITNET,	ZEITNET_1221,	"1221"),
 	DEVICE( ZEITNET,	ZEITNET_1225,	"1225"),
 	DEVICE( OMEGA,		OMEGA_82C092G,	"82C092G"),
+	BRIDGE( GALILEO,	GALILEO_GT64011, "GT64011", 0x00),
 	DEVICE( LITEON,		LITEON_LNE100TX,"LNE100TX"),
 	DEVICE( NP,		NP_PCI_FDDI,	"NP-PCI"),       
 	DEVICE( ATT,		ATT_L56XMF,	"L56xMF"),
-	BRIDGE( GALILEO,	GALILEO_GT64011, "GT64011", 0x00),
+	DEVICE( ATT,		ATT_L56DVP,	"L56DV+P"),
 	DEVICE( SPECIALIX,	SPECIALIX_XIO,	"XIO/SIO host"),
 	DEVICE( SPECIALIX,	SPECIALIX_RIO,	"RIO host"),
 	DEVICE( AURAVISION,	AURAVISION_VXP524,"VXP524"),
@@ -424,6 +428,7 @@ struct pci_dev_info dev_info[] = {
 	DEVICE( 3DFX,		3DFX_VOODOO,	"Voodoo"),
 	DEVICE( 3DFX,		3DFX_VOODOO2,	"Voodoo2"),
 	DEVICE( SIGMADES,	SIGMADES_6425,	"REALmagic64/GX"),
+	DEVICE( AVM,		AVMB1,		"B1 ISDN"),
 	DEVICE( STALLION,	STALLION_ECHPCI832,"EasyConnection 8/32"),
 	DEVICE( STALLION,	STALLION_ECHPCI864,"EasyConnection 8/64"),
 	DEVICE( STALLION,	STALLION_EIOPCI,"EasyIO"),
@@ -786,6 +791,7 @@ const char *pci_strvendor(unsigned int vendor)
 	      case PCI_VENDOR_ID_INTERG:	return "Intergraphics";
 	      case PCI_VENDOR_ID_REALTEK:	return "Realtek";
 	      case PCI_VENDOR_ID_TRUEVISION:	return "Truevision";
+	      case PCI_VENDOR_ID_IODATA:	return "I-O Data";
 	      case PCI_VENDOR_ID_INIT:		return "Initio Corp";
 	      case PCI_VENDOR_ID_VIA:		return "VIA Technologies";
 	      case PCI_VENDOR_ID_VORTEX:	return "VORTEX";
@@ -803,7 +809,9 @@ const char *pci_strvendor(unsigned int vendor)
 	      case PCI_VENDOR_ID_RICOH:		return "Ricoh";
 	      case PCI_VENDOR_ID_ZEITNET:	return "ZeitNet";
 	      case PCI_VENDOR_ID_OMEGA:		return "Omega Micro";
+	      case PCI_VENDOR_ID_GALILEO:	return "Galileo";
 	      case PCI_VENDOR_ID_NP:		return "Network Peripherals";
+	      case PCI_VENDOR_ID_ATT:		return "Lucent (ex-AT&T) Microelectronics";
 	      case PCI_VENDOR_ID_SPECIALIX:	return "Specialix";
 	      case PCI_VENDOR_ID_IKON:		return "Ikon";
 	      case PCI_VENDOR_ID_ZORAN:		return "Zoran";
@@ -824,6 +832,8 @@ const char *pci_strvendor(unsigned int vendor)
 	      case PCI_VENDOR_ID_ADAPTEC:	return "Adaptec";
 	      case PCI_VENDOR_ID_ATRONICS:	return "Atronics";
 	      case PCI_VENDOR_ID_ARK:		return "ARK Logic";
+	      case PCI_VENDOR_ID_AVM:		return "AVM";
+	      case PCI_VENDOR_ID_ELSA:		return "ELSA";
 	      default:				return "Unknown vendor";
 	}
 }

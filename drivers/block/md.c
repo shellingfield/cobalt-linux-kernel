@@ -237,7 +237,7 @@ static int analyze_sb (int minor, int pnum)
 		sb->major_version, sb->minor_version, sb->patch_version);
 		goto abort;
 	}
-	if (sb->state != (1 << MD_SB_CLEAN)) {
+	if (!(sb->state & (1 << MD_SB_CLEAN))) {
 		printk(KERN_ERR "md: %s: raid array is not clean -- run ckraid\n", kdevname(MKDEV(MD_MAJOR, minor)));
 		goto abort;
 	}

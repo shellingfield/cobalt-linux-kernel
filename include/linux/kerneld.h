@@ -14,9 +14,7 @@
  * Uncomment the following line for the new kerneld protocol
  * This includes the pid of the kernel level requester into the kerneld header
  */
-/*
 #define NEW_KERNELD_PROTOCOL
- */
 #ifdef NEW_KERNELD_PROTOCOL
 #define OLDIPC_KERNELD 00040000   /* use the kerneld message channel */
 #define IPC_KERNELD 00140000   /* use the kerneld message channel, new protocol */

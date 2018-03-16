@@ -1,8 +1,8 @@
-/* $Id: isdn_audio.h,v 1.2 1997/11/29 02:01:36 davem Exp $
+/* $Id: isdn_audio.h,v 1.3 1999/07/07 05:56:10 thockin Exp $
 
  * Linux ISDN subsystem, audio conversion and compression (linklevel).
  *
- * Copyright 1994,95,96 by Fritz Elfert (fritz@wuemaus.franken.de)
+ * Copyright 1994-1998 by Fritz Elfert (fritz@isdn4linux.de)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,38 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_audio.h,v $
- * Revision 1.2  1997/11/29 02:01:36  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:10  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.5.2.2  1998/11/05 22:11:39  fritz
+ * Changed mail-address.
+ *
+ * Revision 1.5.2.1  1998/08/22 16:43:06  armin
+ * Added silence detection in audio receive mode (AT+VSD).
  *
  * Revision 1.5  1997/02/03 22:45:21  fritz
  * Reformatted according CodingStyle
@@ -54,6 +84,11 @@ typedef struct dtmf_state {
 	int buf[DTMF_NPOINTS];
 } dtmf_state;
 
+typedef struct silence_state {
+        int state;
+        unsigned int idx;
+} silence_state;
+
 extern void isdn_audio_ulaw2alaw(unsigned char *, unsigned long);
 extern void isdn_audio_alaw2ulaw(unsigned char *, unsigned long);
 extern adpcm_state *isdn_audio_adpcm_init(adpcm_state *, int);
@@ -63,3 +98,6 @@ extern int isdn_audio_2adpcm_flush(adpcm_state * s, unsigned char *out);
 extern void isdn_audio_calc_dtmf(modem_info *, unsigned char *, int, int);
 extern void isdn_audio_eval_dtmf(modem_info *);
 dtmf_state *isdn_audio_dtmf_init(dtmf_state *);
+extern void isdn_audio_calc_silence(modem_info *, unsigned char *, int, int);
+extern void isdn_audio_eval_silence(modem_info *);
+silence_state *isdn_audio_silence_init(silence_state *);

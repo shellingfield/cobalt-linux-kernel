@@ -1,5 +1,5 @@
 /*
- * $Id: capiutil.c,v 1.2 1998/06/13 11:00:17 davem Exp $
+ * $Id: capiutil.c,v 1.3 1999/07/07 05:56:11 thockin Exp $
  *
  * CAPI 2.0 convert capi message to capi message struct
  *
@@ -7,11 +7,36 @@
  * Rewritten for Linux 1996 by Carsten Paeth (calle@calle.in-berlin.de)
  *
  * $Log: capiutil.c,v $
- * Revision 1.2  1998/06/13 11:00:17  davem
- * Merge to 2.0.34
+ * Revision 1.3  1999/07/07 05:56:11  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
  *
- * Revision 1.1  1997/11/29 02:01:32  davem
- * Merge to 2.0.32
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.3.2.1  1998/08/03 15:52:21  paul
+ * various changes from 2.0.3[45] kernel sources, as suggested by
+ * Oliver.Lauer@coburg.baynet.de
  *
  * Revision 1.3  1997/05/18 09:24:18  calle
  * added verbose disconnect reason reporting to avmb1.

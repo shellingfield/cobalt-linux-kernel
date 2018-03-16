@@ -91,6 +91,16 @@
 #include <linux/wireless.h>
 #endif	/* CONFIG_NET_RADIO */
 
+#define MAX_BACKLOG 300
+#define MIN_BACKLOG (MAX_BACKLOG >> 3)	/* Use this even if reserve fails */
+int maxdev_message_backlog;
+#define BACKLOG_GUESS_MTU 1600
+    /*
+     * cookie for reserve_free - unnecessary since
+     * we cannot be deallocated. (currently).
+     */
+void *net_reserv_mem;
+
 /*
  *	The list of packet types we will receive (as opposed to discard)
  *	and the routines to invoke.
@@ -510,11 +520,12 @@ void netif_rx(struct sk_buff *skb)
 
 	/*
 	 *	Check that we aren't overdoing things.
+	 * tacky - we drop until the q drains to empty. (cj)
 	 */
 
 	if (!backlog_size)
   		dropping = 0;
-	else if (backlog_size > 300)
+	else if (backlog_size > maxdev_message_backlog)
 		dropping = 1;
 
 	if (dropping) 
@@ -1611,6 +1622,20 @@ int net_dev_init(void)
 	net_alias_init();
 #endif
 
+
+	/*
+	 * Attempt to "reserve" memory requirements - buffers tracked
+	 * in the backlog queue are held from device interrupt until
+	 * the software interrupt runs.  In this window, it is impossible
+	 * for the page daemon to run, so we must be sure that there is
+	 * sufficient physical memory available. 
+	 */
+	for ( maxdev_message_backlog = MAX_BACKLOG;
+		(net_reserv_mem = phys_reserve(maxdev_message_backlog
+			    * BACKLOG_GUESS_MTU)) == 0
+			&& maxdev_message_backlog > MIN_BACKLOG;
+		maxdev_message_backlog /= 2)
+	    ;
 	init_bh(NET_BH, net_bh);
 	return 0;
 }

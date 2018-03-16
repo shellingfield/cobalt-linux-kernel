@@ -516,7 +516,7 @@ static __inline__ int tcp_lport_inuse(int num)
  * load is kept track of, if it is zero there is a strong
  * likely hood that there is a zero length chain we will
  * find with a small amount of searching, else the load is
- * what we shoot for for when the chains all have at least
+ * what we shoot for when the chains all have at least
  * one entry.  The base helps us walk the chains in an
  * order such that a good chain is found as quickly as possible.  -DaveM
  */
@@ -943,7 +943,7 @@ static int tcp_select(struct sock *sk, int sel_type, select_table *wait)
 		return 1;
 
 	case SEL_EX:
-		if (sk->urg_data)
+		if (sk->urg_data & URG_VALID)
 			return 1;
 		break;
 	}
@@ -1976,8 +1976,15 @@ static void tcp_close(struct sock *sk, unsigned long timeout)
 
 	if(sk->state == TCP_LISTEN)
 	{
-		/* Special case */
+		/*
+		 * Special case
+		 */
 		tcp_set_state(sk, TCP_CLOSE);
+		/*
+		 *      Our children must die before we do now that
+		 *      sk->listening exists. It was right anyway but
+		 *      dont break this assumption.
+		 */
 		tcp_close_pending(sk);
 		release_sock(sk);
 		sk->dead = 1;
@@ -2046,11 +2053,11 @@ static void tcp_close(struct sock *sk, unsigned long timeout)
 			tcp_reset_msl_timer(sk, TIME_CLOSE, TCP_FIN_TIMEOUT);
 	}
 
-	sk->dead = 1;
 	release_sock(sk);
 
 	if(sk->state == TCP_CLOSE)
 		tcp_v4_unhash(sk);
+	sk->dead = 1;
 }
 
 

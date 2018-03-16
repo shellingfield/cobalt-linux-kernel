@@ -1,8 +1,8 @@
-/* $Id: isdn_tty.h,v 1.2 1997/11/29 02:01:38 davem Exp $
+/* $Id: isdn_tty.h,v 1.3 1999/07/07 05:56:11 thockin Exp $
 
  * header for Linux ISDN subsystem, tty related functions (linklevel).
  *
- * Copyright 1994,95,96 by Fritz Elfert (fritz@wuemaus.franken.de)
+ * Copyright 1994-1998  by Fritz Elfert (fritz@isdn4linux.de)
  * Copyright 1995,96    by Thinking Objects Software GmbH Wuerzburg
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,8 +20,38 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_tty.h,v $
- * Revision 1.2  1997/11/29 02:01:38  davem
- * Merge to 2.0.32
+ * Revision 1.3  1999/07/07 05:56:11  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.10.2.2  1998/11/05 22:12:25  fritz
+ * Changed mail-address.
+ *
+ * Revision 1.10.2.1  1998/10/25 15:48:44  fritz
+ * Misc bugfixes and adaptions to new HiSax
  *
  * Revision 1.10  1997/03/02 14:29:26  fritz
  * More ttyI related cleanup.
@@ -62,7 +92,7 @@ extern void isdn_tty_modem_ring(void);
 extern void isdn_tty_modem_xmit(void);
 extern int isdn_tty_modem_init(void);
 extern void isdn_tty_readmodem(void);
-extern int isdn_tty_find_icall(int, int, setup_parm);
+extern int isdn_tty_find_icall(int, isdn_ctrl *);
 extern void isdn_tty_cleanup_xmit(modem_info *);
 extern int isdn_tty_stat_callback(int, isdn_ctrl *);
 extern int isdn_tty_rcv_skb(int, int, int, struct sk_buff *);

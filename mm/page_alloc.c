@@ -26,6 +26,7 @@
 
 int nr_swap_pages = 0;
 int nr_free_pages = 0;
+int phys_reserve_max = 0;
 
 /*
  * Free area management
@@ -266,6 +267,7 @@ unsigned long free_area_init(unsigned long start_mem, unsigned long end_mem)
 	unsigned long mask = PAGE_MASK;
 	int i;
 
+#if 0
 	/*
 	 * select nr of pages we try to keep free for important stuff
 	 * with a minimum of 48 pages. This is totally arbitrary
@@ -278,6 +280,56 @@ unsigned long free_area_init(unsigned long start_mem, unsigned long end_mem)
 	min_free_pages = i;
 	free_pages_low = i + (i>>1);
 	free_pages_high = i + i;
+#else
+	/*
+	 * The above code is pretty silly.  It waits until memory is
+	 * 98.5% consumed (free_pages_high) before usage statistics
+	 * are collected.  Then, 4 times a second (!!!), we scan and
+	 * age pages until we free 4 pages.
+	 *
+	 * Then, when memory is 98.8% consumed (free_pages_low), we
+	 * start scanning twice as fast - 8 times per second - again
+	 * looking for 4 free pages.
+	 *
+	 * Finally, we try to ensure that memory is never more than
+	 * 99.2% used (min_free_pages) by looking for more pages each
+	 * scan period.  Except that if min_free_pages is more than 48
+	 * we wait until memory is another 12 + (i / 8) scarce.
+	 *
+	 * The below code adjusts these numbers slightly.  We start
+	 * scanning at 80% and double the rate at 96%.  This way, when
+	 * we start throwing pages out of memory, we will have useful
+	 * statistics.
+	 *
+	 * The min_free_pages weirdness is harder to fix since it
+	 * interacts with a lot of code elsewhere.  We added a new
+	 * interface for kernel modules to reserve memory, so we
+	 * leave this pretty low here.
+	 */
+
+	i = (end_mem - start_mem) >> PAGE_SHIFT;	/* Number of pages */
+	free_pages_high = i * 20 / 100;
+	free_pages_low	= i * 4 / 100;
+	min_free_pages = i / 150;
+
+	phys_reserve_max = i * 25 / 100;	/* limit reserve to 25% */
+
+	/*
+	 * If number is too low, bias everything up - this makes sense
+	 * since a low memory system needs to page more efficiently,
+	 * which means the page daemon needs to run more often.
+	 */
+	if (min_free_pages < 24) {
+	    min_free_pages = 24;
+
+	    if ( 2 * min_free_pages > free_pages_low)
+		free_pages_low += (min_free_pages - i / 100);
+
+	    if ( 2 * free_pages_low > free_pages_high)
+		free_pages_high += (free_pages_low - 4 * i / 100);
+	}
+#endif
+
 	start_mem = init_swap_cache(start_mem, end_mem);
 	mem_map = (mem_map_t *) start_mem;
 	p = mem_map + MAP_NR(end_mem);
@@ -302,6 +354,54 @@ unsigned long free_area_init(unsigned long start_mem, unsigned long end_mem)
 		start_mem += bitmap_size;
 	}
 	return start_mem;
+}
+
+/* 
+ * Interface to update the paging parameters to keep sufficient
+ * memory in reserve for interrupt surge.  This is better than
+ * actually allocating the memory since reserved pages can still
+ * be part of a page cache.
+ *
+ * Note : after calling this routine, the memory may not be
+ * available immediately.  If the new values mean that memory is
+ * overcommited, the paging daemon will free up memory gradually.
+ * (of course if called during bootup, this will not be a problem).
+ *
+ * The return value and initial parameter to kmalloc_unreserve
+ * are supposed to match - we might track a structure eventually.
+ */
+void *
+phys_reserve(int bytes)
+{
+    int npgs;
+
+    npgs = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    if (min_free_pages + npgs > phys_reserve_max)
+	return (void *) 0;
+
+    min_free_pages += npgs;
+    free_pages_low += npgs;
+    free_pages_high += npgs;
+
+    return (void *) 0xE10;
+}
+
+void
+phys_unreserve(void *cookie, int bytes)
+{
+    int npgs;
+
+    if (cookie != (void *) 0xE10) {
+	printk("phys_unreserve: memory was not reserved properly\n");
+	return;
+    }
+
+    npgs = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    min_free_pages -= npgs;
+    free_pages_low -= npgs;
+    free_pages_high -= npgs;
 }
 
 /*

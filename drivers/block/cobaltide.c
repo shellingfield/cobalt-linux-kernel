@@ -1,6 +1,6 @@
-/* $Id: cobaltide.c,v 1.17 1999/01/28 11:34:14 davem Exp $
+/* $Id: cobaltide.c,v 1.20 1999/05/05 22:28:13 cjohnson Exp $
  * cobaltide.c: Support for DMA mode on IDE controller found on
- *              Cobalt Microserver CPU27 boards.
+ *              Cobalt Networks boards.
  *
  * Copyright (C) 1997 David S. Miller (davem@dm.cobaltmicro.com)
  */
@@ -528,9 +528,10 @@ void ide_init_cobalt (void)
 	int try_again = 1, dma_enabled = 0;
 	unsigned short cfgword, galileo_id;
 	unsigned int bmiba;
+	unsigned int timeo;
 	unsigned char lt;
 
-	printk("ide: Cobalt MicroServer IDE controller.\n");
+	printk("ide: Cobalt Networks IDE controller.\n");
 
 	/* Hardcoded for now... */
 	bus = 0;
@@ -552,11 +553,14 @@ void ide_init_cobalt (void)
 	 * Therefore we must set the disconnect/retry cycle values to
 	 * something sensible when using the new Galileo.
 	 */
-	pcibios_read_config_word(0, 0, PCI_DEVICE_ID, &galileo_id);
-	if(galileo_id == 0x4146) {
+	pcibios_read_config_word(0, 0, PCI_REVISION_ID, &galileo_id);
+	galileo_id &= 0xff;     /* mask off class info */
+	if (galileo_id == 0x10) {
 		/* New Galileo, assumes PCI stop line to VIA is connected. */
 		*((volatile unsigned int *)0xb4000c04) = 0x00004020;
-	} else {
+	} else if (galileo_id == 0x1 || galileo_id == 0x2) {
+		/* XXX WE MUST DO THIS ELSE GALILEO LOCKS UP! -DaveM */
+		timeo = *((volatile unsigned int *)0xb4000c04);
 		/* Old Galileo, assumes PCI STOP line to VIA is disconnected. */
 		*((volatile unsigned int *)0xb4000c04) = 0x0000ffff;
 	}

@@ -26,6 +26,7 @@ typedef unsigned long	__kernel_mode_t;
 typedef unsigned long	__kernel_nlink_t;
 typedef long		__kernel_off_t;
 typedef long		__kernel_pid_t;
+typedef long		__kernel_ipc_pid_t;
 typedef long		__kernel_uid_t;
 typedef long		__kernel_gid_t;
 typedef __SIZE_TYPE__	__kernel_size_t;
@@ -35,6 +36,7 @@ typedef long		__kernel_time_t;
 typedef long		__kernel_clock_t;
 typedef long		__kernel_daddr_t;
 typedef char *		__kernel_caddr_t;
+typedef int 		__kernel_key_t;
 
 #ifdef __GNUC__
 typedef long long      __kernel_loff_t;

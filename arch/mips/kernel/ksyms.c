@@ -7,7 +7,7 @@
  *
  * Copyright (C) 1996, 1997 by Ralf Baechle
  *
- * $Id: ksyms.c,v 1.3 1997/11/25 04:19:26 davem Exp $
+ * $Id: ksyms.c,v 1.5 1999/07/07 05:56:10 thockin Exp $
  */
 #include <linux/config.h>
 #include <linux/module.h>
@@ -23,6 +23,7 @@
 #include <asm/pgtable.h>
 #include <asm/sgihpc.h>
 #include <asm/segment.h>
+#include <linux/netdevice.h>
 
 static struct symbol_table arch_symbol_table = {
 #include <linux/symtab_begin.h>
@@ -43,7 +44,13 @@ static struct symbol_table arch_symbol_table = {
 	XNOVERS(strnlen),
 	XNOVERS(strrchr),
 	XNOVERS(strtok),
+	XNOVERS(strstr),
+	XNOVERS(__bzero),
+	XNOVERS(__memset),
 
+	X(flush_cache_post_dma_in),
+	X(flush_cache_pre_dma_out),
+	X(lcd_register_linkcheck_func),
 	X(clear_page),
 
 	/*

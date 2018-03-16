@@ -445,17 +445,9 @@ else
 endif
 
 ifeq ($(CONFIG_COBALT_TULIP),y)
-L_OBJS += cobalttulip.o
-else
-  ifeq ($(CONFIG_COBALT_TULIP),m)
-  M_OBJS += cobalttulip.o
-  endif
-endif
-
-ifeq ($(CONFIG_COBALT_TULIP_RAQ),y)
 L_OBJS += cobalttulip_raq.o
 else
-  ifeq ($(CONFIG_COBALT_TULIP_RAQ),m)
+  ifeq ($(CONFIG_COBALT_TULIP),m)
   M_OBJS += cobalttulip_raq.o
   endif
 endif

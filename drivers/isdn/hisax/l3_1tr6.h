@@ -1,15 +1,46 @@
-/* $Id: l3_1tr6.h,v 1.1 1997/11/29 02:01:34 davem Exp $
+/* $Id: l3_1tr6.h,v 1.2 1999/07/07 05:56:09 thockin Exp $
  *
  *  German 1TR6 D-channel protocol defines
  *
  * $Log: l3_1tr6.h,v $
- * Revision 1.1  1997/11/29 02:01:34  davem
- * Merge to 2.0.32
+ * Revision 1.2  1999/07/07 05:56:09  thockin
+ * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
+ *   - Make menuconfig now works
+ *
+ *   - Using config-sk now builds just about everything as modules
+ *     This should make a small enough kernel to use for ROM
+ *
+ *   - /lib/modules/%{version} is now included by this package
+ *
+ *   - .config is now included in this package
+ *
+ *   - Added $(MODROOT) for make modules_install
+ *
+ *   - ISDN4Linux tree pulled from 2.0.36
+ *
+ *   - Added PCI IDs for ISDN cards (Fritz Elfert)
+ *
+ *   - Added strstr symbol export
+ *
+ *   - Added isdnlog patch from Fritz Elfert
+ *
+ *   - config-sk now builds ISDN modules by default
+ *
+ *   - Changed /tmp/kernel to /var/tmp/kernel for BuildRoot
+ *
+ *   - Added %clean section to specfile
+ *
+ * Revision 1.1.2.2  1998/09/27 13:06:46  keil
+ * Apply most changes from 2.1.X (HiSax 3.1)
+ *
+ * Revision 1.1.2.1  1997/10/17 22:14:15  keil
+ * update to last hisax version
+ *
+ * Revision 2.0  1997/07/27 21:15:47  keil
+ * New Callref based layer3
  *
  * Revision 1.1  1996/10/13 20:03:48  keil
  * Initial revision
- *
- *
  *
  */
 #ifndef l3_1tr6
@@ -31,7 +62,6 @@
 #define MT_N0_INF_REJ 0x68
 #define MT_N0_CLOSE   0x75
 #define MT_N0_CLO_ACK 0x77
-
 
 /*
  * MsgType N1
@@ -67,8 +97,7 @@
 #define MT_N1_REG_ACK 0x6C
 #define MT_N1_REG_REJ 0x6F
 #define MT_N1_STAT 0x63
-
-
+#define MT_N1_INVALID 0
 
 /*
  * W Elemente
@@ -159,5 +188,13 @@
 #define CAUSE_RemoteUserResumed 0x73
 #define CAUSE_UserInfoDiscarded 0x7F
 
+#define T303	4000
+#define T304	20000
+#define T305	4000
+#define T308	4000
+#define T310	120000
+#define T313	4000
+#define T318	4000
+#define T319	4000
 
 #endif

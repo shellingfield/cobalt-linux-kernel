@@ -19,6 +19,14 @@
 /*
  * This struct defines the way the registers are stored on the stack during a
  * system call/exception. As usual the registers k0/k1 aren't being saved.
+ *
+ * The above is accurate - the macros in mips/stackframe.h and mips/offset.h
+ * seem to match the following structure, which is what is passed to trap and
+ * interrupt handlers.
+ * 
+ * BUT this is not the structure that ptrace returns - ptrace order is
+ *	regs, fpregs, misc. regs.
+ * See mips/gdb-stub.h
  */
 struct pt_regs {
 	/* Pad bytes for argument save space on the stack. */

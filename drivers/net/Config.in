@@ -110,13 +110,7 @@ if [ "$CONFIG_NET_ETHERNET" = "y" ]; then
     fi
     tristate 'Apricot Xen-II on board ethernet' CONFIG_APRICOT
     if [ "$CONFIG_COBALT_MICRO_SERVER" = "y" ]; then
-      bool 'Cobalt DECchip Tulip (dc21x4x) onboard support' CONFIG_COBALT_TULIP_ANY
-      if [ "$CONFIG_COBALT_TULIP_ANY" = "y" ]; then
-        tristate 'Special RAQ version of Tulip driver' CONFIG_COBALT_TULIP_RAQ
-        if [ "$CONFIG_COBALT_TULIP_RAQ" = "n" ]; then
-          define_bool CONFIG_COBALT_TULIP y
-        fi
-      fi
+      tristate 'Cobalt DECchip Tulip (dc21x4x) onboard support' CONFIG_COBALT_TULIP
       tristate 'Cobalt 3com (3c59x) PCI card support' CONFIG_COBALT_3COM
       tristate 'Cobalt Intel EtherExpress/Pro 100B support' CONFIG_COBALT_E100
     fi

@@ -205,6 +205,16 @@ extern void time_init(void);
 static unsigned long memory_start = 0;
 static unsigned long memory_end = 0;
 
+#ifdef CONFIG_REMOTE_DEBUG
+/*
+ * This flag is set by the boot parameter "kdb"
+ * I.e.  at the Cobalt boot prompt
+ *         bfd /boot/mylinux.gz kdb
+ * This enters the kernel debuger as soon as possible.
+ */
+int do_kgdb_asap = 0;
+#endif
+
 #ifdef BOOTLOADER
 
 extern long sys_read( int, char *, int);
@@ -660,8 +670,19 @@ static void parse_options(char *line)
 
 	if (!*line)
 		return;
-	args = 0;
-	envs = 1;	/* TERM is set to 'linux' by default */
+
+	/*
+	 * Skip initial existing args/envs
+	 * The "+ 1" on the compare lines is because we need to
+	 * leave a slot for the NULL termination.
+	 */
+	for (args = 0; args + 1 < sizeof(argv_init)/sizeof(argv_init[0])
+			&& argv_init[args]; args++)
+		;
+	for (envs = 0; envs + 1 < sizeof(envp_init)/sizeof(envp_init[0])
+			&& envp_init[envs]; envs++)
+		;
+
 	next = line;
 	while ((line = next) != NULL) {
 		if ((next = strchr(line,' ')) != NULL)
@@ -704,6 +725,12 @@ static void parse_options(char *line)
 			root_mountflags &= ~MS_RDONLY;
 			continue;
 		}
+		if (!strcmp(line,"kdb")) {
+#ifdef CONFIG_REMOTE_DEBUG
+			do_kgdb_asap = 1;
+#endif
+			continue;
+		}
 		if (!strcmp(line,"debug")) {
 			console_loglevel = 10;
 			continue;
@@ -716,23 +743,62 @@ static void parse_options(char *line)
 		if (checksetup(line))
 			continue;
 		/*
-		 * Then check if it's an environment variable or
-		 * an option.
+		 * Then check if it's an environment variable or an option.
+		 *
+		 * The "+ 1" on the bounds check leaves room for the NULL.
 		 */
 		if (strchr(line,'=')) {
-			if (envs >= MAX_INIT_ENVS)
+			if (envs + 1 >= sizeof(envp_init)/sizeof(envp_init[0]))
 				break;
-			envp_init[++envs] = line;
+			envp_init[envs++] = line;
 		} else {
-			if (args >= MAX_INIT_ARGS)
+			if (args + 1 >= sizeof(argv_init)/sizeof(argv_init[0]))
 				break;
-			argv_init[++args] = line;
+			argv_init[args++] = line;
 		}
 	}
-	argv_init[args+1] = NULL;
-	envp_init[envs+1] = NULL;
+	argv_init[args] = NULL;
+	envp_init[envs] = NULL;
 }
 
+/*
+ * Add the string parameter to the environment of init.
+ * Parameter is a space separated list of X=Y entries.
+ */
+void
+add_init_env(char *line)
+{
+	char *next;
+	int envs;
+
+#ifdef DEBUG_LOADER
+	printk("add_env: parsing line = '%s'\n", line);
+#endif
+
+	if (!*line)
+		return;
+
+	/*
+	 * Skip initial existing envs - always add 1 to bounds
+	 * check to leave space for NULL terminator on env.
+	 */
+
+	for (envs = 0; envs + 1 < sizeof(envp_init)/sizeof(envp_init[0])
+			&& envp_init[envs]; envs++)
+		;
+
+	next = line;
+	while ((line = next) != NULL) {
+		if ((next = strchr(line,' ')) != NULL)
+			*next++ = 0;
+		if (strchr(line,'=')) {
+			if (envs + 1 >= sizeof(envp_init)/sizeof(envp_init[0]))
+				break;
+			envp_init[envs++] = line;
+		}
+	}
+	envp_init[envs] = NULL;
+}
 
 extern void setup_arch(char **, unsigned long *, unsigned long *);
 extern void arch_syms_export(void);
@@ -854,10 +920,42 @@ asmlinkage void start_kernel(void)
 	setup_arch(&command_line, &memory_start, &memory_end);
 	memory_start = paging_init(memory_start,memory_end);
 	trap_init();
+
 	init_IRQ();
+
+	/* DBG fails here */
+
 	sched_init();
-	time_init();
+
 	parse_options(command_line);
+
+	memory_start = console_init(memory_start,memory_end);
+
+#if defined(CONFIG_REMOTE_DEBUG)
+    {
+	void set_debug_traps(void), breakpoint(void);
+	/*
+	 * trap_init sets the breakpoint vectors, so we grab them here if
+	 * we are debugging.  This means that anyone who wants can just
+	 * call breakpoint to get to the debugger.
+	 */
+
+	set_debug_traps();
+
+	/*
+	 * This seems to be the earliest that we can fire of the debugger.
+	 * I have no idea what sched_init() does to confuse parse_options
+	 * or the running debugger.  Needless to say, the serial interface
+	 * needs to be initialized before the debugger will work.
+	 */
+	if (do_kgdb_asap) {
+		printk("entering kernel debugger\n");
+		breakpoint();
+	}
+    }
+#endif
+	time_init();
+
 #ifdef CONFIG_MODULES
 	init_modules();
 #endif
@@ -877,7 +975,7 @@ asmlinkage void start_kernel(void)
 		memory_start += prof_len * sizeof(unsigned int);
 		memset(prof_buffer, 0, prof_len * sizeof(unsigned int));
 	}
-	memory_start = console_init(memory_start,memory_end);
+
 #ifdef CONFIG_PCI
 	memory_start = pci_init(memory_start,memory_end);
 #endif
@@ -887,15 +985,15 @@ asmlinkage void start_kernel(void)
 	calibrate_delay();
 
 #ifdef BOOTLOADER
-	printk("BOOTLOADER: command_line = '%s'\n", command_line); 
+	printk("BOOTLOADER kernel: command_line = '%s'\n", command_line); 
 
-	do {
+	if ((ROOT_DEV & 0x1600) != 0x1600) {
 		unsigned long ide_regs = 0x100001f0;
 		unsigned char status;
 
 #define IDE_STATUS_REGOFF      0x07
 #define IDE_STATUS_BUSY                0x80
-		printk("BOOTLOADER: waiting for drive spinup.");
+		printk("BOOTLOADER kernel: waiting for hda spinup.");
 		bl_start = jiffies;
 		status = inb(ide_regs + IDE_STATUS_REGOFF);
 		while(status & IDE_STATUS_BUSY) {
@@ -909,7 +1007,31 @@ asmlinkage void start_kernel(void)
 			status = inb(ide_regs + IDE_STATUS_REGOFF);
 		}
 		printk("done\n");
-	} while(0);
+	} 
+	
+	// Spin up /dev/hdc
+	if ((ROOT_DEV & 0x1600) == 0x1600) {
+                unsigned long ide_regs = 0x10000170;
+                unsigned char status;
+
+                printk("BOOTLOADER kernel: waiting for hdc spinup.");
+                bl_start = jiffies;
+                status = inb(ide_regs + IDE_STATUS_REGOFF);
+                while(status & IDE_STATUS_BUSY) {
+                        udelay(50000);
+
+                        /* Safety net. */
+                        if(jiffies > (bl_start + (15 * HZ)))
+                                break;
+
+                        printk(".");
+                        status = inb(ide_regs + IDE_STATUS_REGOFF);
+                }
+                printk("done\n");
+        } 
+
+
+
 #endif
 
 	memory_start = inode_init(memory_start,memory_end);
@@ -1081,7 +1203,7 @@ static int init(void * unused)
        bl_retaddr = (unsigned long *) kRAMCodeAddr;
        bl_filename = * kBootloaderFilenameAddr;
 
-        printk("BOOTLOADER: loading kernel image %s to address %p\n", 
+       printk("BOOTLOADER kernel: loading kernel image %s to address %p\n", 
 		bl_filename, bl_buf);
 
        /*
@@ -1091,21 +1213,22 @@ static int init(void * unused)
 
         bl_fd = sys_open(bl_filename, O_RDONLY, 0);
        if (bl_fd < 0) {
-           printk("BOOTLOADER: sys_open(%s,2,0) returned %d\n", bl_filename, bl_fd);
+           printk("BOOTLOADER kernel: sys_open(%s,2,0) failed (%d)\n", bl_filename, bl_fd);
+	   * ((int *)(kDiskerrorAddr)) = 1;
        } else {
            while ( (bl_retval = sys_read( bl_fd, bl_buf, 0x80000)) > 0 )
            {
-               printk("BOOTLOADER: read %ld bytes of %s\n", bl_retval, bl_filename);
+               printk("BOOTLOADER kernel: read %ld bytes of %s\n", bl_retval, bl_filename);
                bl_buf += bl_retval;
            }
 
            if (bl_retval < 0) {
-               printk("BOOTLOADER: got %ld from sys_read(%d, %p, 0x80000), "
+               printk("BOOTLOADER kernel: got %ld from sys_read(%d, %p, 0x80000), "
                       "setting disk_error (@ %p) to 1\n",
                       bl_retval, bl_fd, bl_buf, kDiskerrorAddr);
                * ((int *)(kDiskerrorAddr)) = 1;
            } else {
-               printk("BOOTLOADER: finished loading kernel at %p\n", bl_buf);
+               printk("BOOTLOADER kernel: finished loading kernel at %p\n", bl_buf);
            }
        }
        {
@@ -1113,13 +1236,13 @@ static int init(void * unused)
 	    extern struct device * second_tulip_dev;
 #if 1
 	    if (first_tulip_dev) {
-		printk("BOOTLOADER: calling first_tulip_dev->stop()\n");
+		printk("BOOTLOADER kernel: calling first_tulip_dev->stop()\n");
 		(*first_tulip_dev->stop)(first_tulip_dev);
 	    }
 #endif
 #if 0
 	    if (second_tulip_dev) {
-		printk("BOOTLOADER: calling second_tulip_dev->stop()\n");
+		printk("BOOTLOADER kernel: calling second_tulip_dev->stop()\n");
 		(*second_tulip_dev->stop)(second_tulip_dev);
 	    }
 #endif
@@ -1128,14 +1251,13 @@ static int init(void * unused)
 
         bl_jump_back = ( void (*)(void) ) (*bl_retaddr);
 
-        printk("BOOTLOADER: interrupts off, returning back to (*kRAMCodeAddr) (%p)\n",
+        printk("BOOTLOADER kernel: interrupts off, returning back to (*kRAMCodeAddr) (%p)\n",
               bl_jump_back);
-
-       /* flush_cache_all(); */
 
         set_cp0_status(ST0_IM, 0);
         cli();
 
+	flush_cache_all();
         (*bl_jump_back)();
 
 #endif /* BOOTLOADER */
