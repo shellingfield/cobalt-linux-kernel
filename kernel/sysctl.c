@@ -224,7 +224,7 @@ extern asmlinkage int sys_sysctl(struct __sysctl_args *args)
 }
 
 /* Like in_group_p, but testing against egid, not fsgid */
-static int in_egroup_p(gid_t grp)
+int in_egroup_p(gid_t grp)
 {
 	int	i;
 

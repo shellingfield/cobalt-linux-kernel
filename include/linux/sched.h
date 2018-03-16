@@ -346,6 +346,7 @@ extern void notify_parent(struct task_struct * tsk, int signal);
 extern void force_sig(unsigned long sig,struct task_struct * p);
 extern int send_sig(unsigned long sig,struct task_struct * p,int priv);
 extern int in_group_p(gid_t grp);
+extern int in_egroup_p(gid_t grp);
 
 extern int request_irq(unsigned int irq,
 		       void (*handler)(int, void *, struct pt_regs *),

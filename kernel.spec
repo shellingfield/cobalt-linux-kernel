@@ -1,8 +1,8 @@
 Summary: Cobalt MIPS kernel 
 Name: kernel
-Version: 2.0.34C49_SK
+Version: 2.0.34C50_SK
 %define version %{PACKAGE_VERSION}
-Release: 3
+Release: 1
 Copyright: GPL/Cobalt
 Group: Base/Kernel
 ExclusiveOS: Linux
@@ -10,6 +10,15 @@ Source: linux-2.0.34-cobalt.tar.gz
 BuildRoot: /var/tmp/kernel
 
 %changelog
+* Tue Sep 21 1999  Tim Hockin <thockin@cobaltnet.com>
+  - Adding multi-LUN support
+  - Added 'make rpm' to Makefile
+  - C50 
+
+* Wed Sep 08 1999  Tim Hockin <thockin@cobaltnet.com>
+  - Fix for socket (af_unix at least) bug crashing system
+  - At some point asum checked in quota fixes
+
 * Mon Aug 09 1999  Tim Hockin <thockin@cobaltnet.com>
   - PCI serial now assigns ttys and probes ioports correctly
   - PCI serial now detects UART types correctly for PCI modems
@@ -390,14 +399,11 @@ mv linux linux-%{version}
 ln -sfn linux-%{version} linux
 
 %build
-
 cd linux
 cp config-sk arch/mips/defconfig
 make oldconfig
-make dep
-make
-strip vmlinux
-gzip vmlinux
+make dep clean
+make cobalt
 make modules
 
 cd $RPM_BUILD_ROOT/usr/src/linux-%{version}
@@ -406,7 +412,6 @@ make oldconfig
 make include/linux/version.h
 
 %install
-
 cd linux
 
 mkdir -p $RPM_BUILD_ROOT/boot

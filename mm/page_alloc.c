@@ -214,6 +214,7 @@ repeat:
 	if ((priority==GFP_ATOMIC) || nr_free_pages > reserved_pages) {
 		RMQUEUE(order, dma);
 		restore_flags(flags);
+		/* FIXME: who put this here and why? */
 		if (priority != GFP_ATOMIC)
 			goto repeat;
 	} else {

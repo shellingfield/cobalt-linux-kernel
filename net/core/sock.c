@@ -524,9 +524,12 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, unsigned long size, unsigne
 			skb = sock_wmalloc(sk, size, 0, sk->allocation);
 		else
 		{
-			/* The buffer get won't block, or use the atomic queue. It does
-			   produce annoying no free page messages still.... */
-			skb = sock_wmalloc(sk, size, 0 , GFP_IO);
+			/* The buffer get won't block, or use the atomic queue. 
+			 * It does produce annoying no free page messages 
+			 * still.... 
+			 */
+			/* changed to ATOMIC from IO for af_unix bug - TPH */
+			skb = sock_wmalloc(sk, size, 0 , GFP_ATOMIC);
 			if(!skb)
 				skb=sock_wmalloc(sk, fallback, 0, GFP_KERNEL);
 		}

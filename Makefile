@@ -1,7 +1,7 @@
 VERSION = 2
 PATCHLEVEL = 0
 SUBLEVEL = 34
-EXTRAVERSION = C49_SK
+EXTRAVERSION = C50_SK
 
 KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
 
@@ -185,6 +185,11 @@ cobalt:
 	make vmlinux
 	strip vmlinux
 	gzip -f -9 vmlinux
+
+rpm:    clean
+	tar -C .. -X .ignore -czvf /usr/src/redhat/SOURCES/linux-2.0.34-cobalt.tar.gz linux
+	cp kernel.spec /usr/src/redhat/SPECS
+	echo rpm -ba /usr/src/redhat/SPECS/kernel.spec
 
 symlinks:
 	rm -f include/asm
