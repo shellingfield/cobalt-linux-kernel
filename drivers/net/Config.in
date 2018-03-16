@@ -10,6 +10,9 @@ if [ "$CONFIG_EXPERIMENTAL" = "y" ]; then
     int '  Max DLCI per device' CONFIG_DLCI_MAX 8
     dep_tristate '  SDLA (Sangoma S502/S508) support' CONFIG_SDLA $CONFIG_DLCI
   fi
+  if [ "$CONFIG_DLCI" = "m" ]; then
+    bool 'Enable other modules to load DLCI module' CONFIG_DLCI_MODULE
+  fi
 fi
 tristate 'PLIP (parallel port) support' CONFIG_PLIP
 tristate 'PPP (point-to-point) support' CONFIG_PPP

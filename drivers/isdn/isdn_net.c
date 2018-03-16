@@ -1,4 +1,4 @@
-/* $Id: isdn_net.c,v 1.4 1999/07/07 05:56:10 thockin Exp $
+/* $Id: isdn_net.c,v 1.5 2000/04/07 04:42:32 cjohnson Exp $
 
  * Linux ISDN subsystem, network interfaces and related functions (linklevel).
  *
@@ -21,6 +21,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_net.c,v $
+ * Revision 1.5  2000/04/07 04:42:32  cjohnson
+ * - Enabled IPAUTOFW and CONFIG_DLCI/CONFIG_DLCI_MODULE
+ *
+ * - Merged IPPORTFW patch
+ *
+ * - Merged in latest (11/27/99) ISDN from Fritz Elfert
+ *
+ * - Added patches to adaptec driver for recent hardware
+ *
  * Revision 1.4  1999/07/07 05:56:10  thockin
  * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
  *   - Make menuconfig now works
@@ -377,7 +386,7 @@ static int isdn_net_start_xmit(struct sk_buff *, struct device *);
 static int isdn_net_xmit(struct device *, isdn_net_local *, struct sk_buff *);
 static void dev_purge_queues(struct device *dev);	/* move this to net/core/dev.c */
 
-char *isdn_net_revision = "$Revision: 1.4 $";
+char *isdn_net_revision = "$Revision: 1.5 $";
 
  /*
   * Code for raw-networking over ISDN
@@ -1073,6 +1082,12 @@ isdn_net_hangup(struct device *d)
 	isdn_ctrl cmd;
 
 	if (lp->flags & ISDN_NET_CONNECTED) {
+		/* If this interface has slaves, do a hangup for them also. */
+		struct device *slave = lp->slave;
+		while (slave) {
+			isdn_net_hangup(slave);
+			slave = (((isdn_net_local *) slave->priv)->slave);
+		}
 		lp->flags &= ~ISDN_NET_CONNECTED;
 		isdn_putlog(KERN_INFO "isdn_net: local hangup %s\n", lp->name);
 #ifdef CONFIG_ISDN_PPP
@@ -1433,19 +1448,8 @@ isdn_putlog("reject: jiffies=%ld, started=%ld, timeout=%d, wait=%ld, timer=%ld\n
 static int
 isdn_net_close(struct device *dev)
 {
-	struct device *p;
-
 	dev->tbusy = 1;
 	dev->start = 0;
-	if ((p = (((isdn_net_local *) dev->priv)->slave))) {
-		/* If this interface has slaves, stop them also */
-		while (p) {
-			isdn_net_hangup(p);
-			p->tbusy = 1;
-			p->start = 0;
-			p = (((isdn_net_local *) p->priv)->slave);
-		}
-	}
 	isdn_net_hangup(dev);
 	isdn_MOD_DEC_USE_COUNT();
 	return 0;
@@ -2857,17 +2861,10 @@ int
 isdn_net_force_hangup(char *name)
 {
 	isdn_net_dev *p = isdn_net_findif(name);
-	struct device *q;
 
 	if (p) {
 		if (p->local.isdn_device < 0)
 			return 1;
-		q = p->local.slave;
-		/* If this interface has slaves, do a hangup for them also. */
-		while (q) {
-			isdn_net_hangup(q);
-			q = (((isdn_net_local *) q->priv)->slave);
-		}
 		isdn_net_hangup(&p->dev);
 		return 0;
 	}

@@ -977,6 +977,116 @@ int ip_autofw_ctl(int stage, void *m, int len)
 
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
 
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+extern struct ip_portfw *ipportfw_lst[2];
+
+int ip_portfw_del(__u16 protocol, __u16 lport, __u32 laddr)
+{
+        int prot = (protocol==IPPROTO_TCP);
+        struct ip_portfw *n = ipportfw_lst[prot];
+        struct ip_portfw *ntmp;
+
+        if (!n) return 1;
+
+        if (n->lport == lport && n->laddr == laddr) {
+                ipportfw_lst[prot] = n->next;
+                kfree_s(n, sizeof(*n));
+                return 0;
+        }
+        for ( ; n->next ; n = n->next)
+                if (n->next->lport == lport && n->next->laddr == laddr) {
+                        ntmp = n->next;
+                        n->next = n->next->next;
+                        kfree_s(ntmp, sizeof(*ntmp));
+                        return 0;
+                }
+
+        /* Entry not found so return an error */
+        return 1;
+}
+
+void ip_portfw_flush(void)
+{
+        int prot;
+        struct ip_portfw *c, *n;
+ 
+        for (prot = 0; prot < 2; prot++) {
+                c = ipportfw_lst[prot];
+                ipportfw_lst[prot] = NULL;
+                for ( ; c; c = n) {
+                        n = c->next;
+                        kfree_s(c, size(*c));
+                }
+        }
+}
+
+int ip_portfw_add(__u16 protocol, __u16 lport, __u32 laddr, __u16 rport, __u32 raddr)
+{
+        struct ip_portfw  *newportfw;
+        int prot = (protocol==IPPROTO_TCP);
+         
+        newportfw = (struct ip_portfw*)
+                kmalloc(sizeof(struct ip_portfw), GFP_ATOMIC);
+
+        if (!newportfw)
+                return 1;
+
+        newportfw->laddr = laddr;
+        newportfw->lport = lport;
+        newportfw->rport = rport;
+        newportfw->raddr = raddr;
+        newportfw->next = ipportfw_lst[prot];
+        ipportfw_lst[prot] = newportfw;
+        return 0;
+}
+
+int ip_portfw_ctl(int cmd, void *m, int len)
+{
+        unsigned long   flags;
+        int failed;
+        struct ip_portfw_edits *mm = (struct ip_portfw_edits *) m;
+ 
+        /* Don't trust the lusers - plenty of error checking! */
+ 
+        if (cmd != IP_PORTFW_ADD && cmd != IP_PORTFW_DEL
+            && cmd != IP_PORTFW_FLUSH)
+                return (EINVAL);
+ 
+        if (cmd != IP_PORTFW_FLUSH) {
+                if (mm->lport < IP_PORTFW_PORT_MIN || mm->lport > IP_PORTFW_PORT_MAX)
+                        return (EINVAL);
+
+                if (mm->protocol!=IPPROTO_TCP && mm->protocol!=IPPROTO_UDP)
+                        return (EINVAL);
+        }
+
+        if (cmd == IP_PORTFW_ADD) {
+                save_flags(flags); cli();
+                ip_portfw_del(mm->protocol, htons(mm->lport), htonl(mm->laddr));
+                failed = ip_portfw_add(mm->protocol,
+			   htons(mm->lport), htonl(mm->laddr),
+			   htons(mm->rport), htonl(mm->raddr));
+                restore_flags(flags);
+                return (failed ? ENOMEM : 0);
+        }
+        else if (cmd == IP_PORTFW_DEL) {
+                save_flags(flags); cli();
+                failed = ip_portfw_del(mm->protocol, htons(mm->lport),
+                           htonl(mm->laddr));
+                restore_flags(flags);
+                return (failed ? EINVAL : 0);
+        }
+        else if (cmd == IP_PORTFW_FLUSH) {
+                save_flags(flags); cli();
+                ip_portfw_flush();
+                restore_flags(flags);
+                return 0;
+        }               
+        else
+                return (EINVAL);        /* This should have avoided in ip_sockglue.c */
+}
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
+
 #ifdef CONFIG_IP_FIREWALL
 int ip_fw_ctl(int stage, void *m, int len)
 {

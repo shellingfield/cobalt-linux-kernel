@@ -1,4 +1,4 @@
-/* $Id: isdn_tty.c,v 1.3 1999/07/07 05:56:11 thockin Exp $
+/* $Id: isdn_tty.c,v 1.4 2000/04/07 04:42:32 cjohnson Exp $
 
  * Linux ISDN subsystem, tty functions and AT-command emulator (linklevel).
  *
@@ -20,6 +20,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_tty.c,v $
+ * Revision 1.4  2000/04/07 04:42:32  cjohnson
+ * - Enabled IPAUTOFW and CONFIG_DLCI/CONFIG_DLCI_MODULE
+ *
+ * - Merged IPPORTFW patch
+ *
+ * - Merged in latest (11/27/99) ISDN from Fritz Elfert
+ *
+ * - Added patches to adaptec driver for recent hardware
+ *
  * Revision 1.3  1999/07/07 05:56:11  thockin
  * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
  *   - Make menuconfig now works
@@ -293,7 +302,7 @@ static int bit2si[8] =
 static int si2bit[8] =
 {4, 1, 4, 4, 4, 4, 4, 4};
 
-char *isdn_tty_revision = "$Revision: 1.3 $";
+char *isdn_tty_revision = "$Revision: 1.4 $";
 
 #define DLE 0x10
 #define ETX 0x03
@@ -449,10 +458,19 @@ isdn_tty_rcv_skb(int i, int di, int channel, struct sk_buff *skb)
 		kfree_skb(skb, FREE_READ);
 		return 1;
 	}
-	if (info->emu.mdmreg[13] & 2)
-		/* T.70 decoding: Simply throw away the T.70 header (4 bytes) */
-		if ((skb->data[0] == 1) && ((skb->data[1] == 0) || (skb->data[1] == 1)))
-			skb_pull(skb, 4);
+	if (info->emu.mdmreg[13] & 2) {
+		if (info->emu.mdmreg[13] & 32) {
+			if (skb->data[0] == 3) /* pure data packet -> 4 byte headers  */
+				skb_pull(skb, 4);
+			else
+				if (skb->data[0] == 1) /* keepalive packet -> 2
+byte hdr  */
+					skb_pull(skb, 2);
+		} else
+			/* T.70 decoding: Simply throw away the T.70 header (4 bytes) */
+			if ((skb->data[0] == 1) && ((skb->data[1] == 0) || (skb->data[1] == 1)))
+				skb_pull(skb, 4);
+	}
 #ifdef CONFIG_ISDN_AUDIO
 	if (skb_headroom(skb) < sizeof(isdn_audio_skb)) {
 		isdn_putlog(KERN_WARNING
@@ -785,9 +803,13 @@ isdn_tty_senddown(modem_info * info)
 	}
 #endif                          /* CONFIG_ISDN_AUDIO */
 	SET_SKB_FREE(skb);
-	if (info->emu.mdmreg[13] & 2)
-		/* Add T.70 simplified header */
-		memcpy(skb_push(skb, 4), "\1\0\1\0", 4);
+	if (info->emu.mdmreg[13] & 2) {
+		if (info->emu.mdmreg[13] & 32)
+			memcpy(skb_push(skb, 2), "\1\0", 2);
+			/* Add T.70 simplified header */
+		else
+			memcpy(skb_push(skb, 4), "\1\0\1\0", 4);
+	}
 	skb_queue_tail(&info->xmit_queue, skb);
 }
 
@@ -2469,8 +2491,11 @@ isdn_tty_modem_result(int code, modem_info * info)
 				case 5:
 					/* Append Protocol to CONNECT message */
 					isdn_tty_at_cout((m->mdmreg[14] != 3) ? "/X.75" : "/HDLC", info);
-					if (m->mdmreg[13] & 2)
+					if (m->mdmreg[13] & 2) {
 						isdn_tty_at_cout("/T.70", info);
+						if (m->mdmreg[13] & 32)
+							isdn_tty_at_cout("+", info);
+					}
 					break;
 			}
 		}
@@ -2572,7 +2597,12 @@ isdn_tty_report(modem_info * info)
 			isdn_tty_at_cout("unknown", info);
 			break;
 	}
-	isdn_tty_at_cout((m->mdmreg[13] & 2) ? "/t.70\r\n" : "\r\n", info);
+	if (m->mdmreg[13] & 2) {
+		isdn_tty_at_cout("/T.70", info);
+		if (m->mdmreg[13] & 32)
+			isdn_tty_at_cout("+", info);
+	}
+	isdn_tty_at_cout("\r\n", info);
 	isdn_tty_at_cout("    Service:          ", info);
 	switch (info->last_si) {
 		case 1:
@@ -2685,15 +2715,23 @@ isdn_tty_cmd_ATand(char **p, modem_info * info)
 			}
 			break;
 		case 'X':
-			/* &X - Switch to BTX-Mode */
+			/* &X - Switch to BTX-Mode and T.70 */
 			p[0]++;
 			switch (isdn_getnum(p)) {
 				case 0:
-					m->mdmreg[13] &= ~2;
+					m->mdmreg[13] &= ~(32|2);
 					info->xmit_size = m->mdmreg[16] * 16;
 					break;
 				case 1:
 					m->mdmreg[13] |= 2;
+					m->mdmreg[13] &= ~32;
+					m->mdmreg[14] = 0;
+					info->xmit_size = 112;
+					m->mdmreg[18] = 4;
+					m->mdmreg[19] = 0;
+					break;
+				case 2:
+					m->mdmreg[13] |= (32|2);
 					m->mdmreg[14] = 0;
 					info->xmit_size = 112;
 					m->mdmreg[18] = 4;

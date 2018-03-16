@@ -1,4 +1,4 @@
-/* $Id: isdn_common.h,v 1.3 1999/07/07 05:56:10 thockin Exp $
+/* $Id: isdn_common.h,v 1.4 2000/04/07 04:42:32 cjohnson Exp $
 
  * header for Linux ISDN subsystem, common used functions and debugging-switches (linklevel).
  *
@@ -21,6 +21,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_common.h,v $
+ * Revision 1.4  2000/04/07 04:42:32  cjohnson
+ * - Enabled IPAUTOFW and CONFIG_DLCI/CONFIG_DLCI_MODULE
+ *
+ * - Merged IPPORTFW patch
+ *
+ * - Merged in latest (11/27/99) ISDN from Fritz Elfert
+ *
+ * - Added patches to adaptec driver for recent hardware
+ *
  * Revision 1.3  1999/07/07 05:56:10  thockin
  * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
  *   - Make menuconfig now works
@@ -108,7 +117,7 @@ extern int isdn_readbchan(int, int, u_char *, u_char *, int, int);
 extern int isdn_get_free_channel(int, int, int, int, int);
 extern int isdn_writebuf_skb_stub(int, int, struct sk_buff *);
 extern int register_isdn(isdn_if * i);
-extern void isdn_putlog(char *fmt, ...);
+extern void isdn_printk(char *fmt, ...);
 #if (LINUX_VERSION_CODE < 0x020111)
 extern void isdn_export_syms(void);
 #else
@@ -117,3 +126,8 @@ extern void isdn_export_syms(void);
 #if defined(ISDN_DEBUG_NET_DUMP) || defined(ISDN_DEBUG_MODEM_DUMP) || defined(CONFIG_ISDN_TIMEOUT_RULES)
 extern void isdn_dumppkt(char *, u_char *, int, int);
 #endif
+
+#define isdn_putlog(fmt, args...) ( \
+	printk(fmt , ## args), \
+	isdn_printk(fmt , ## args) \
+)

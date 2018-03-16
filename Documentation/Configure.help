@@ -955,6 +955,15 @@ CONFIG_IP_MASQUERADE_IPAUTOFW
   and other information, is available at
   ftp://ftp.netis.com/pub/members/rlynch/.
 
+IP: ipportfw masquerade support
+CONFIG_IP_MASQUERADE_IPPORTFW
+  ipportfw is an addition to IP Masquerading written by Steven Clarke
+  to allow some forwarding of packets from outside to inside a
+  firewall on given ports. Information and source for ipportfw is
+  available from
+  http://www.monmouth.demon.co.uk/ipsubs/portforwarding.html
+  If you want this, say Y.
+
 IP: ICMP masquerading
 CONFIG_IP_MASQUERADE_ICMP
   The basic masquerade code described for CONFIG_IP_MASQUERADE only

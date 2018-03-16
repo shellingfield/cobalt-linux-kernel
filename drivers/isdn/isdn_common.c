@@ -1,4 +1,4 @@
-/* $Id: isdn_common.c,v 1.3 1999/07/07 05:56:10 thockin Exp $
+/* $Id: isdn_common.c,v 1.4 2000/04/07 04:42:32 cjohnson Exp $
 
  * Linux ISDN subsystem, common used functions (linklevel).
  *
@@ -21,6 +21,15 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_common.c,v $
+ * Revision 1.4  2000/04/07 04:42:32  cjohnson
+ * - Enabled IPAUTOFW and CONFIG_DLCI/CONFIG_DLCI_MODULE
+ *
+ * - Merged IPPORTFW patch
+ *
+ * - Merged in latest (11/27/99) ISDN from Fritz Elfert
+ *
+ * - Added patches to adaptec driver for recent hardware
+ *
  * Revision 1.3  1999/07/07 05:56:10  thockin
  * * Tue Jul 6 1999  Tim Hockin <thockin@cobaltnet.com>
  *   - Make menuconfig now works
@@ -282,7 +291,7 @@
 
 isdn_dev *dev = (isdn_dev *) 0;
 
-static char *isdn_revision = "$Revision: 1.3 $";
+static char *isdn_revision = "$Revision: 1.4 $";
 
 extern char *isdn_net_revision;
 extern char *isdn_tty_revision;
@@ -341,8 +350,10 @@ isdn_dumppkt(char *s, u_char * p, int len, int dumplen)
 	int dumpc;
 
 	isdn_putlog(KERN_DEBUG "%s(%d) ", s, len);
-	for (dumpc = 0; (dumpc < dumplen) && (len); len--, dumpc++)
-		isdn_putlog(" %02x", *p++);
+	for (dumpc = 0; (dumpc < dumplen) && (len); len--, dumpc++) {
+		isdn_putlog(" %02x", *p);
+		p++;
+	}
 	isdn_putlog("\n");
 }
 #endif
@@ -972,18 +983,17 @@ isdn_readlog(u_char * buf, int len)
 	return len;
 }
 
-static void
-isdn_vputlog(char *fmt, va_list args)
+void
+isdn_printk(char *fmt, ...)
 {
-/* if head == NULL the fmt contains the full info */
+	va_list args;
 
 	long flags;
 	int count, i;
 	u_char *p;
 	int len;
 
-	save_flags(flags);
-	cli();
+	va_start(args, fmt);
 	p = tmplogbuf;
 	p += vsprintf(p, fmt, args);
 	*p = 0;
@@ -992,10 +1002,17 @@ isdn_vputlog(char *fmt, va_list args)
 	if (len > ISDN_LOGBUFSIZE) {
 		printk(KERN_WARNING "isdn: putlog overflow %d/%d",
 			len, ISDN_LOGBUFSIZE);
-		restore_flags(flags);
 		return;
 	}
+	if ((strlen(p) > 2) && (p[0] == '<') && (p[2] == '>') &&
+	    (p[1] >= '0') && (p[1] <= '9')) {
+		/* Don't print severity to log_file */
+		p += 3;
+		len -= 3;
+	}
 	count = len;
+	save_flags(flags);
+	cli();
 	i = isdn_log_end - isdn_log_write +1;
 	if (i >= len)
 		i = len;
@@ -1014,20 +1031,6 @@ isdn_vputlog(char *fmt, va_list args)
 		isdn_logavail += count;
 		wake_up_interruptible(&isdn_log_waitq);
 	}
-}
-
-void
-isdn_putlog(char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	printk(fmt, args);
-	/* Don't print severity to log_file */
-	if ((strlen(fmt) > 2) && (fmt[0] == '<') && (fmt[2] == '>') &&
-	    (fmt[1] >= '0') && (fmt[1] <= '9'))
-		fmt += 3;
-	isdn_vputlog(fmt, args);
 	va_end(args);
 }
 
@@ -2141,6 +2144,7 @@ int
 isdn_init(void)
 {
 	int i;
+	char *p;
 	char irev[50];
 	char trev[50];
 	char nrev[50];
@@ -2196,11 +2200,16 @@ isdn_init(void)
 	strcpy(nrev, isdn_net_revision);
 	strcpy(prev, isdn_ppp_revision);
 	strcpy(arev, isdn_audio_revision);
-	isdn_putlog(KERN_NOTICE "ISDN subsystem Rev: %s/", isdn_getrev(irev));
-	isdn_putlog("%s/", isdn_getrev(trev));
-	isdn_putlog("%s/", isdn_getrev(nrev));
-	isdn_putlog("%s/", isdn_getrev(prev));
-	isdn_putlog("%s", isdn_getrev(arev));
+	p = isdn_getrev(irev);
+	isdn_putlog(KERN_NOTICE "ISDN subsystem Rev: %s/", p);
+	p = isdn_getrev(trev);
+	isdn_putlog("%s/", p);
+	p = isdn_getrev(nrev);
+	isdn_putlog("%s/", p);
+	p = isdn_getrev(prev);
+	isdn_putlog("%s/", p);
+	p = isdn_getrev(arev);
+	isdn_putlog("%s", p);
 
 #ifdef MODULE
 	isdn_putlog(" loaded\n");

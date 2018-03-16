@@ -1021,7 +1021,7 @@ asmlinkage int sys_recvfrom(int fd, void * ubuf, int size, unsigned flags,
 		return(-EBADF);
 	if (!(sock = sockfd_lookup(fd, NULL))) 
 	  	return(-ENOTSOCK);
-	if(size<0)
+	if(size<0 || size >= 65468)
 		return -EINVAL;
 	if(size==0)
 		return 0;

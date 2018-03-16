@@ -20,6 +20,7 @@
  *	Delian Delchev		:	Added support for ICMP requests and replys
  *	Nigel Metheringham	:	ICMP in ICMP handling, tidy ups, bug fixes, made ICMP optional
  *	Juan Jose Ciarlante	:	re-assign maddr if no packet received from outside
+ *	Steven Clarke		:	Added Port Forwarding
  *	
  */
 
@@ -248,6 +249,38 @@ void ip_autofw_update_in (__u32 where, __u16 port, __u16 protocol)
 }
 
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
+
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+
+struct ip_portfw *ipportfw_lst[2];
+
+struct ip_portfw *ip_portfw_lookup(__u16 protocol, __u16 lport, __u32 laddr, __u32 *daddr, __u16 *dport)
+{
+	int prot = (protocol==IPPROTO_TCP);
+	struct ip_portfw *n;
+	unsigned long   flags;
+
+	save_flags(flags); cli();
+	for (n = ipportfw_lst[prot] ; n; n = n->next)
+	{
+		if (lport == n->lport && laddr == n->laddr) {
+			*daddr = n->raddr;
+			*dport = n->rport;
+			restore_flags(flags);
+			return n;
+		}
+	}
+	restore_flags(flags);
+	return NULL;
+}
+
+int ip_portfw_check(__u16 protocol, __u16 lport, __u32 laddr)
+{
+	__u16 rport;
+	__u32 raddr;
+	return (ip_portfw_lookup(protocol, lport, laddr, &raddr, &rport) != NULL);
+}
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
 
 /*
  *	Returns hash value
@@ -698,6 +731,51 @@ struct ip_masq * ip_masq_new(struct device *dev, int proto, __u32 saddr, __u16 s
 {
 	return (ip_masq_new_enh(dev, proto, saddr, sport, daddr, dport, mflags, 0) );
 }
+
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+
+/*	New form of ip_masq creation which creates masqs for Port Forwarding
+ *	The routine is sufficiently different to ip_masq_new to require its own function
+ */
+
+struct ip_masq * ip_masq_new_portfw(struct device *dev, int proto, __u32 raddr, __u16 rport, __u32 saddr, __u16 sport,
+	__u32 laddr, __u16 lport)
+{
+	struct ip_masq *ms;
+	static int n_fails = 0;
+	unsigned long flags;
+
+	ms = (struct ip_masq *) kmalloc(sizeof(struct ip_masq), GFP_ATOMIC);
+	if (ms == NULL) {
+		if (++n_fails < 5)
+			printk("ip_masq_new_s(proto=%s): no memory available.\n",  masq_proto_name(proto));
+		return NULL;
+	}
+	memset(ms, 0, sizeof(*ms));
+	init_timer(&ms->timer);
+        ms->timer.data     = (unsigned long)ms;
+        ms->timer.function = masq_expire;
+        ms->protocol      = proto;
+        ms->saddr         = raddr;
+        ms->sport         = rport;
+        ms->daddr         = saddr;
+        ms->dport         = sport;
+        ms->maddr         = laddr;
+        ms->mport         = lport; 
+        ms->flags         = 0;
+        ms->app_data      = NULL;
+        ms->control       = NULL;
+
+        ip_masq_free_ports[masq_proto_num(proto)]--;
+
+        save_flags(flags);
+        cli();
+        ip_masq_hash(ms);
+        restore_flags(flags);
+
+        return ms;
+}
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
 
 /*
  * 	Set masq expiration (deletion) and adds timer,
@@ -1380,7 +1458,10 @@ int ip_fw_demasquerade(struct sk_buff **skb_p, struct device *dev)
 		    && !ip_autofw_check_direct(portptr[1], iph->protocol)
 		    && !ip_autofw_check_port(portptr[1], iph->protocol)
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
-			)
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+                    && !ip_portfw_check(iph->protocol, portptr[1], iph->daddr)
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
+		        )
 			return 0;
 
 		/* Check that the checksum is OK */
@@ -1447,6 +1528,21 @@ int ip_fw_demasquerade(struct sk_buff **skb_p, struct device *dev)
         			     htons(af->visible));
         }
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+        /* If no entry exists in the masquerading table, and the port is involved
+           in port forwarding, create a new entry */
+        {
+                __u32 raddr;
+                __u16 rport;
+                if ((ms == NULL) &&
+                      (iph->protocol==IPPROTO_TCP || iph->protocol==IPPROTO_UDP) &&
+                      ip_portfw_lookup(iph->protocol, portptr[1], iph->daddr, &raddr, &rport))
+                {
+	                ms = ip_masq_new_portfw(dev, iph->protocol, raddr, rport,
+                                iph->saddr, portptr[0], iph->daddr, portptr[1]);
+                }
+        }
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
 
         if (ms != NULL)
         {
@@ -1602,6 +1698,60 @@ static int ip_autofw_procinfo(char *buffer, char **start, off_t offset,
 }
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
 
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+static int ip_portfw_procinfo(char *buffer, char **start, off_t offset,
+                            int length, int unused)
+{
+        off_t pos=0, begin;
+        struct ip_portfw *pf;
+        unsigned long flags;
+        char temp[65];
+        int ind, raddr, laddr;
+        int len=0;
+
+        if (offset < 64) 
+        {
+                sprintf(temp, "Prot Local Addr/Port > Remote Addr/Port");
+                len = sprintf(buffer, "%-63s\n", temp);
+        }
+        pos = 64;
+        save_flags(flags);
+        cli();
+
+        for(ind = 0; ind < 2; ind++)
+        {
+                for(pf = ipportfw_lst[ind]; pf ; pf = pf->next)
+                {
+                        pos += 64;
+                        if (pos <= offset)
+                                continue;
+
+                        raddr = ntohl(pf->raddr);
+                        laddr = ntohl(pf->laddr);
+                        sprintf(temp,"%s %d.%d.%d.%d/%d > %d.%d.%d.%d/%d",
+                                strProt[ind],
+                                (laddr >> 24) & 255, (laddr >> 16) & 255,
+                                (laddr >> 8) & 255, laddr & 255, ntohs(pf->lport),
+                                (raddr >> 24) & 255, (raddr >> 16) & 255,
+                                (raddr >> 8) & 255, raddr & 255, ntohs(pf->rport) );
+                        len += sprintf(buffer+len, "%-63s\n", temp);
+
+                        if (len >= length)
+                                goto done;
+		}
+        }
+done:
+        restore_flags(flags);
+        begin = len - (pos - offset);
+        *start = buffer + begin;
+        len -= begin;
+        if(len>length)
+                len = length;
+        return len;
+}
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
+
+
 static int ip_msqhst_procinfo(char *buffer, char **start, off_t offset,
 			      int length, int unused)
 {
@@ -1687,7 +1837,15 @@ int ip_masq_init(void)
 		ip_autofw_procinfo
 	});
 #endif /* CONFIG_IP_MASQUERADE_IPAUTOFW */
-#endif	
+#ifdef CONFIG_IP_MASQUERADE_IPPORTFW
+                proc_net_register(&(struct proc_dir_entry) {
+                PROC_NET_IPPORTFW, 9, "ip_portfw",
+                S_IFREG | S_IRUGO , 1, 0, 0,
+                0, &proc_net_inode_operations,
+                ip_portfw_procinfo
+        });
+#endif /* CONFIG_IP_MASQUERADE_IPPORTFW */
+#endif /* CONFIG_PROC_FS */
         ip_masq_app_init();
 
         return 0;

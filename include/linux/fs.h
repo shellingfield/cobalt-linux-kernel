@@ -27,13 +27,7 @@
 
 /* Fixed constants first: */
 #undef NR_OPEN
-#ifdef CONFIG_IP_TRANSPARENT_PROXY
-/* XXX yes we know this is bloody gross, if this doesn't make you
-   XXX sick, check out the sauce end of it all... -DaveM  */
-#define NR_OPEN 1024
-#else
-#define NR_OPEN 256
-#endif
+#define NR_OPEN 1024 /* number of open files per process */
 
 #define NR_SUPER 64
 #define BLOCK_SIZE 1024
@@ -43,7 +37,7 @@
 extern int max_inodes, nr_inodes;
 extern int max_files, nr_files;
 #define NR_INODE 3072	/* this should be bigger than NR_FILE */
-#define NR_FILE 1024	/* this can well be larger on a larger system */
+#define NR_FILE 4096	/* number of open files per system */
 
 #define MAY_EXEC 1
 #define MAY_WRITE 2
