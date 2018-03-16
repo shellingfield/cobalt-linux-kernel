@@ -238,8 +238,10 @@ unsigned long do_mmap(struct file * file, unsigned long addr, unsigned long len,
 	if (flags & MAP_FIXED) {
 		if (addr & ~PAGE_MASK)
 			return -EINVAL;
-	} else {
+	}
+	else {
 		addr = get_unmapped_area(addr, len);
+
 		if (!addr)
 			return -ENOMEM;
 	}
@@ -334,6 +336,16 @@ unsigned long do_mmap(struct file * file, unsigned long addr, unsigned long len,
 }
 
 /*
+ * CACHE_ALIGN is cache specific to deal with virtually tagged caches.
+ * For most systems, PAGE_ALIGN is sufficient, but some processors or
+ * board designs may be cache impaired.
+ */
+
+#ifndef CACHE_ALIGN
+#define CACHE_ALIGN PAGE_ALIGN
+#endif
+
+/*
  * Get an address range which is currently unmapped.
  * For mmap() without MAP_FIXED and shmat() with addr=0.
  * Return value 0 means ENOMEM.
@@ -346,15 +358,17 @@ unsigned long get_unmapped_area(unsigned long addr, unsigned long len)
 		return 0;
 	if (!addr)
 		addr = MMAP_SEARCH_START;
-	addr = PAGE_ALIGN(addr);
+
+	addr = CACHE_ALIGN(addr);
 
 	for (vmm = find_vma(current->mm, addr); ; vmm = vmm->vm_next) {
+
 		/* At this point:  (!vmm || addr < vmm->vm_end). */
 		if (MAX_USER_ADDR - len < addr)
 			return 0;
 		if (!vmm || addr + len <= vmm->vm_start)
 			return addr;
-		addr = vmm->vm_end;
+		addr = CACHE_ALIGN(vmm->vm_end);
 	}
 }
 

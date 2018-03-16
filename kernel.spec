@@ -1,6 +1,6 @@
 Summary: Cobalt MIPS kernel 
 Name: kernel
-Version: 2.0.34C50_SK
+Version: 2.0.34C51_SK
 %define version %{PACKAGE_VERSION}
 Release: 1
 Copyright: GPL/Cobalt
@@ -10,6 +10,11 @@ Source: linux-2.0.34-cobalt.tar.gz
 BuildRoot: /var/tmp/kernel
 
 %changelog
+* Thu Sep 30 1999 Chris Johnson <cjohnson@cobaltnet.com>
+  - Fix to mmap to align to 16k boundary to deal with newly
+    discovered virtual cache tag bits in Q.E.D. processor.
+  - C51
+
 * Tue Sep 21 1999  Tim Hockin <thockin@cobaltnet.com>
   - Adding multi-LUN support
   - Added 'make rpm' to Makefile

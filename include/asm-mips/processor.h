@@ -5,7 +5,7 @@
  * written by Ralf Baechle
  * Modified further for R[236]000 compatibility by Paul M. Antoine
  *
- * $Id: processor.h,v 1.7 1998/06/18 05:52:23 davem Exp $
+ * $Id: processor.h,v 1.8 1999/09/30 22:47:50 cjohnson Exp $
  */
 #ifndef __ASM_MIPS_PROCESSOR_H
 #define __ASM_MIPS_PROCESSOR_H
@@ -48,6 +48,15 @@ extern int EISA_bus;
 #define TASK_SIZE	(0x80000000UL)
 #define MAX_USER_ADDR	TASK_SIZE
 #define MMAP_SEARCH_START (TASK_SIZE/3)
+
+#if defined(CONFIG_COBALT_27) || defined(CONFIG_COBALT_28)
+    /*
+     * QED 25xx family uses 2 bits of virtual address in cache tag,
+     * so we use the following macro in mm/mmap.c to adjust shared
+     * regions to work properly.
+     */
+#define CACHE_ALIGN(addr)	(((addr) + 0x3fff) & ~0x3fff)
+#endif
 
 /*
  * Size of io_bitmap in longwords: 32 is ports 0-0x3ff.
