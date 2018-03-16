@@ -1,7 +1,7 @@
 VERSION = 2
 PATCHLEVEL = 0
 SUBLEVEL = 34
-EXTRAVERSION = C51_SK
+EXTRAVERSION = C52_SK
 
 KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
 
@@ -189,7 +189,7 @@ cobalt:
 rpm:    clean
 	tar -C .. -X .ignore -czvf /usr/src/redhat/SOURCES/linux-2.0.34-cobalt.tar.gz linux
 	cp kernel.spec /usr/src/redhat/SPECS
-	echo now run    rpm -ba /usr/src/redhat/SPECS/kernel.spec
+	echo "now run \" rpm -ba /usr/src/redhat/SPECS/kernel.spec \""
 
 symlinks:
 	rm -f include/asm

@@ -55,6 +55,8 @@ extern unsigned long mips_io_port_base;
  *
  */
 
+#define ARCH_IOPORT_MAX		0x20000000
+
 #define __SLOW_DOWN_IO \
 	__asm__ __volatile__( \
 		"sb\t$0,0x80(%0)" \

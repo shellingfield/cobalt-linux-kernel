@@ -1,6 +1,6 @@
 Summary: Cobalt MIPS kernel 
 Name: kernel
-Version: 2.0.34C51_SK
+Version: 2.0.34C52_SK
 %define version %{PACKAGE_VERSION}
 Release: 2
 Copyright: GPL/Cobalt
@@ -10,6 +10,17 @@ Source: linux-2.0.34-cobalt.tar.gz
 BuildRoot: /var/tmp/kernel
 
 %changelog
+* Tue Nov 30 1999  Tim Hockin <thockin@cobaltnet.com>
+  - Backed out misaligned stack warning
+  - bumped rev to C52-2, for unified kernel product patch
+
+* Tue Oct 19 1999  Tim Hockin <thockin@cobaltnet.com>
+  - Added LMC hack to prevent tulip driver from id'ing LMC cards
+
+* Tue Oct 19 1999 Tim Hockin <thockin@cobaltnet.com>
+  - Fix for PCI serial on older firmware PCI modems
+  - C52 for release on projects
+
 * Thu Sep 30 1999 Chris Johnson <cjohnson@cobaltnet.com>
   - Fix to mmap to align to 16k boundary to deal with newly
     discovered virtual cache tag bits in Q.E.D. processor.

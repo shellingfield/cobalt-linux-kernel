@@ -64,7 +64,7 @@
 #include <asm/bitops.h>
 
 static char *serial_name = "PCI Serial driver";
-static char *serial_version = "1.04";
+static char *serial_version = "1.05";
 
 DECLARE_TASK_QUEUE(tq_pciserial);
 
@@ -1178,6 +1178,10 @@ static void change_speed(struct async_struct *info)
 	serial_outp(info, UART_DLL, quot & 0xff);	/* LS of divisor */
 	serial_outp(info, UART_DLM, quot >> 8);		/* MS of divisor */
 	serial_outp(info, UART_LCR, cval);		/* reset DLAB */
+	if (fcr & UART_FCR_ENABLE_FIFO) {
+		/* DSP emulated UARTs (Lucent Venus 167x) need two steps */
+		serial_outp(info, UART_FCR, UART_FCR_ENABLE_FIFO);
+	}
 	serial_outp(info, UART_FCR, fcr); 	/* set fcr */
 	restore_flags(flags);
 }
@@ -2359,7 +2363,7 @@ static void autoconfig(struct async_struct * info)
 		scratch2 = serial_inp(info, UART_MSR);
 		serial_outp(info, UART_MCR, UART_MCR_LOOP | 0x0A);
 		/* this is needed for slow-to-respond PCI modems */
-		udelay(1000);
+		udelay(10000);
 		status1 = serial_inp(info, UART_MSR);
 		status1 &= 0xF0;
 		serial_outp(info, UART_MCR, scratch);
@@ -2376,7 +2380,7 @@ static void autoconfig(struct async_struct * info)
 	serial_outp(info, UART_LCR, scratch2);
 	serial_outp(info, UART_FCR, UART_FCR_ENABLE_FIFO);
 	/* this is needed for slow-to-respond PCI modems */
-	udelay(1000);
+	udelay(10000);
 	scratch = serial_in(info, UART_IIR) >> 6;
 	info->xmit_fifo_size = 1;
 	switch (scratch) {

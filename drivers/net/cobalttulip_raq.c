@@ -595,7 +595,7 @@ int tulip_probe(struct device *dev)
 		return -ENODEV;
 
 	for (;pci_index < 0xff; pci_index++) {
-		u16 vendor, device, pci_command, new_command;
+		u16 vendor, device, pci_command, new_command, subvendor;
 		int chip_idx;
 		int irq;
 		long ioaddr;
@@ -610,16 +610,20 @@ int tulip_probe(struct device *dev)
 				break;
 		}
 		pcibios_read_config_word(pci_bus, pci_device_fn,
-								 PCI_VENDOR_ID, &vendor);
+			PCI_VENDOR_ID, &vendor);
 		pcibios_read_config_word(pci_bus, pci_device_fn,
-								 PCI_DEVICE_ID, &device);
+			PCI_DEVICE_ID, &device);
+		pcibios_read_config_word(pci_bus, pci_device_fn,
+			PCI_SUBSYSTEM_ID, &subvendor);
 
 		for (chip_idx = 0; pci_tbl[chip_idx].vendor_id; chip_idx++)
 			if (vendor == pci_tbl[chip_idx].vendor_id
-				&& (device & pci_tbl[chip_idx].device_id_mask) ==
+			    && (device & pci_tbl[chip_idx].device_id_mask) ==
 				pci_tbl[chip_idx].device_id)
 				break;
 		if (pci_tbl[chip_idx].vendor_id == 0)
+			continue;
+		if (subvendor == 0x1376) /* Ingore LMC WAN Cards */
 			continue;
 
 		{

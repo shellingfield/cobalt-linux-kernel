@@ -139,7 +139,7 @@ static int read_port(struct inode * inode, struct file * file,char * buf, int co
 	unsigned int i = file->f_pos;
 	char * tmp = buf;
 
-	while (count-- > 0 && i < 65536) {
+	while (count-- > 0 && i < ARCH_IOPORT_MAX) {
 		put_user(inb(i),tmp);
 		i++;
 		tmp++;
@@ -153,7 +153,7 @@ static int write_port(struct inode * inode, struct file * file, const char * buf
 	unsigned int i = file->f_pos;
 	const char * tmp = buf;
 
-	while (count-- > 0 && i < 65536) {
+	while (count-- > 0 && i < ARCH_IOPORT_MAX) {
 		outb(get_user(tmp),i);
 		i++;
 		tmp++;
