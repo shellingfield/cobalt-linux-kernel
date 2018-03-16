@@ -2,7 +2,7 @@ Summary: Cobalt MIPS kernel
 Name: kernel
 Version: 2.0.34C51_SK
 %define version %{PACKAGE_VERSION}
-Release: 1
+Release: 2
 Copyright: GPL/Cobalt
 Group: Base/Kernel
 ExclusiveOS: Linux
@@ -406,6 +406,7 @@ ln -sfn linux-%{version} linux
 %build
 cd linux
 cp config-sk arch/mips/defconfig
+#unset CONFIGURATION
 make oldconfig
 make dep clean
 make cobalt
