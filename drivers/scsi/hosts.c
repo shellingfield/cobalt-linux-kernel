@@ -183,7 +183,7 @@
 
 
 /*
-static const char RCSid[] = "$Header: /usr/src/linux-1.3.95/drivers/scsi/RCS/hosts.c,v 1.7 1996/04/25 22:21:56 root Exp root $";
+static const char RCSid[] = "$Header: /fargo/cvs/linux/drivers/scsi/hosts.c,v 1.2 1997/11/29 02:01:49 davem Exp $";
 */
 
 /*

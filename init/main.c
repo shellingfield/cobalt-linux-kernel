@@ -37,6 +37,11 @@
 #include <linux/nfs_fs.h>
 #endif
 
+#ifdef BOOTLOADER
+#include <linux/netdevice.h>
+#include <asm/fcntl.h>
+#endif
+
 #include <asm/bugs.h>
 
 /*
@@ -187,6 +192,8 @@ extern void baycom_setup(char *str, int *ints);
 extern void ipc_init(void);
 #endif
 
+extern int serial_console;
+
 /*
  * Boot command-line arguments
  */
@@ -197,6 +204,20 @@ extern void time_init(void);
 
 static unsigned long memory_start = 0;
 static unsigned long memory_end = 0;
+
+#ifdef BOOTLOADER
+
+extern long sys_read( int, char *, int);
+
+static unsigned long bl_start;
+static int bl_fd;
+static long bl_retval;
+static char *bl_buf;
+static long *bl_retaddr;
+static char *bl_filename;
+static void (*bl_jump_back)( void );
+
+#endif /* BOOTLOADER */
 
 int rows, cols;
 
@@ -633,6 +654,10 @@ static void parse_options(char *line)
 	char *next;
 	int args, envs;
 
+#ifdef DEBUG_LOADER
+	printk("parse_option: parsing cmdline = '%s'\n", line);
+#endif
+
 	if (!*line)
 		return;
 	args = 0;
@@ -857,8 +882,36 @@ asmlinkage void start_kernel(void)
 	memory_start = pci_init(memory_start,memory_end);
 #endif
 	memory_start = kmalloc_init(memory_start,memory_end);
+
 	sti();
 	calibrate_delay();
+
+#ifdef BOOTLOADER
+	printk("BOOTLOADER: command_line = '%s'\n", command_line); 
+
+	do {
+		unsigned long ide_regs = 0x100001f0;
+		unsigned char status;
+
+#define IDE_STATUS_REGOFF      0x07
+#define IDE_STATUS_BUSY                0x80
+		printk("BOOTLOADER: waiting for drive spinup.");
+		bl_start = jiffies;
+		status = inb(ide_regs + IDE_STATUS_REGOFF);
+		while(status & IDE_STATUS_BUSY) {
+			udelay(50000);
+
+			/* Safety net. */
+			if(jiffies > (bl_start + (15 * HZ)))
+				break;
+
+			printk(".");
+			status = inb(ide_regs + IDE_STATUS_REGOFF);
+		}
+		printk("done\n");
+	} while(0);
+#endif
+
 	memory_start = inode_init(memory_start,memory_end);
 	memory_start = file_table_init(memory_start,memory_end);
 	memory_start = name_cache_init(memory_start,memory_end);
@@ -926,7 +979,13 @@ static int do_shell(void * shell)
 {
 	close(0);close(1);close(2);
 	setsid();
-	(void) open("/dev/tty1",O_RDWR,0);
+	if (serial_console == 1) {
+		(void) open("/dev/cua0",O_RDWR,0);
+	} else if(serial_console == 2) {
+		(void) open("/dev/cua1",O_RDWR,0);
+	} else {
+		(void) open("/dev/tty1",O_RDWR,0);
+	}
 	(void) dup(0);
 	(void) dup(0);
 	return execve(shell, argv, envp);
@@ -949,6 +1008,10 @@ static void no_initrd(char *s,int *ints)
 {
 	mount_initrd = 0;
 }
+#endif
+
+#ifdef BOOTLOADER
+#include "../../include/diagdefs.h"
 #endif
 
 static int init(void * unused)
@@ -1012,17 +1075,78 @@ static int init(void * unused)
 		}
 	}
 #endif
-	
-	/*
-	 *	This keeps serial console MUCH cleaner, but does assume
-	 *	the console driver checks there really is a video device
-	 *	attached (Sparc effectively does).
-	 */
 
-	if ((open("/dev/tty1",O_RDWR,0) < 0) &&
-	    (open("/dev/ttyS0",O_RDWR,0) < 0))
-		printk("Unable to open an initial console.\n");
-			
+#ifdef BOOTLOADER
+       bl_buf = (unsigned char *) kCompAddr;
+       bl_retaddr = (unsigned long *) kRAMCodeAddr;
+       bl_filename = * kBootloaderFilenameAddr;
+
+        printk("BOOTLOADER: loading kernel image %s to address %p\n", 
+		bl_filename, bl_buf);
+
+       /*
+        * call to sys_open was sys_open(bl_filename, 2, 0) but this is wrong
+        * since filesystem is mounted read-only
+        */
+
+        bl_fd = sys_open(bl_filename, O_RDONLY, 0);
+       if (bl_fd < 0) {
+           printk("BOOTLOADER: sys_open(%s,2,0) returned %d\n", bl_filename, bl_fd);
+       } else {
+           while ( (bl_retval = sys_read( bl_fd, bl_buf, 0x80000)) > 0 )
+           {
+               printk("BOOTLOADER: read %ld bytes of %s\n", bl_retval, bl_filename);
+               bl_buf += bl_retval;
+           }
+
+           if (bl_retval < 0) {
+               printk("BOOTLOADER: got %ld from sys_read(%d, %p, 0x80000), "
+                      "setting disk_error (@ %p) to 1\n",
+                      bl_retval, bl_fd, bl_buf, kDiskerrorAddr);
+               * ((int *)(kDiskerrorAddr)) = 1;
+           } else {
+               printk("BOOTLOADER: finished loading kernel at %p\n", bl_buf);
+           }
+       }
+       {
+	    extern struct device * first_tulip_dev;
+	    extern struct device * second_tulip_dev;
+#if 1
+	    if (first_tulip_dev) {
+		printk("BOOTLOADER: calling first_tulip_dev->stop()\n");
+		(*first_tulip_dev->stop)(first_tulip_dev);
+	    }
+#endif
+#if 0
+	    if (second_tulip_dev) {
+		printk("BOOTLOADER: calling second_tulip_dev->stop()\n");
+		(*second_tulip_dev->stop)(second_tulip_dev);
+	    }
+#endif
+	}
+
+
+        bl_jump_back = ( void (*)(void) ) (*bl_retaddr);
+
+        printk("BOOTLOADER: interrupts off, returning back to (*kRAMCodeAddr) (%p)\n",
+              bl_jump_back);
+
+       /* flush_cache_all(); */
+
+        set_cp0_status(ST0_IM, 0);
+        cli();
+
+        (*bl_jump_back)();
+
+#endif /* BOOTLOADER */
+
+	if (serial_console == 1) {
+		(void) open("/dev/cua0",O_RDWR,0);
+	} else if(serial_console == 2) {
+		(void) open("/dev/cua1",O_RDWR,0);
+	} else {
+		(void) open("/dev/tty1",O_RDWR,0);
+	}
 	(void) dup(0);
 	(void) dup(0);
 

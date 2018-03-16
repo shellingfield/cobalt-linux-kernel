@@ -65,6 +65,10 @@ ifeq ($(CONFIG_BLK_DEV_TRITON),y)
 L_OBJS += triton.o
 endif
 
+ifeq ($(CONFIG_BLK_DEV_COBALT),y)
+L_OBJS += cobaltide.o
+endif
+
 ifeq ($(CONFIG_BLK_DEV_DTC2278),y)
 L_OBJS += dtc2278.o
 endif
@@ -147,6 +151,21 @@ endif
 #    endif
 #  endif
 #endif
+ifeq ($(CONFIG_MD_MIRRORING),y)
+L_OBJS += raid1.o
+else
+  ifeq ($(CONFIG_MD_MIRRORING),m)
+  M_OBJS += raid1.o
+  endif
+endif
+
+ifeq ($(CONFIG_MD_RAID5),y)
+L_OBJS += raid5.o
+else
+  ifeq ($(CONFIG_MD_RAID5),m)
+  M_OBJS += raid5.o
+  endif
+endif
 
 endif
 

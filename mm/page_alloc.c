@@ -213,11 +213,13 @@ repeat:
 	if ((priority==GFP_ATOMIC) || nr_free_pages > reserved_pages) {
 		RMQUEUE(order, dma);
 		restore_flags(flags);
-		return 0;
+		if (priority != GFP_ATOMIC)
+			goto repeat;
+	} else {
+		restore_flags(flags);
+		if (priority != GFP_BUFFER && try_to_free_page(priority, dma, 1))
+			goto repeat;
 	}
-	restore_flags(flags);
-	if (priority != GFP_BUFFER && try_to_free_page(priority, dma, 1))
-		goto repeat;
 	return 0;
 }
 

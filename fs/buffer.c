@@ -462,6 +462,11 @@ static inline struct buffer_head * find_buffer(kdev_t dev, int block, int size)
 	return NULL;
 }
 
+struct buffer_head *efind_buffer(kdev_t dev, int block, int size)
+{
+	return find_buffer(dev, block, size);
+}
+
 /*
  * Why like this, I hear you say... The reason is race-conditions.
  * As we don't lock buffers (unless we are reading them, that is),
@@ -473,6 +478,12 @@ struct buffer_head * get_hash_table(kdev_t dev, int block, int size)
 {
 	struct buffer_head * bh;
 
+#ifdef BUFFER_NOBLOCK
+	bh = find_buffer(dev, block, size);
+	if(bh)
+		bh->b_count++;
+	return bh;
+#else
 	for (;;) {
 		if (!(bh=find_buffer(dev,block,size)))
 			return NULL;
@@ -483,6 +494,7 @@ struct buffer_head * get_hash_table(kdev_t dev, int block, int size)
 			return bh;
 		bh->b_count--;
 	}
+#endif
 }
 
 void set_blocksize(kdev_t dev, int size)
@@ -634,7 +646,9 @@ static inline void recover_reusable_buffer_heads(void)
 	}
 }
 
+#if defined(__SMP__) && defined(__i386__)
 extern void allow_interrupts(void);
+#endif
 
 static void refill_freelist(int size)
 {
@@ -650,6 +664,9 @@ static void refill_freelist(int size)
 	/* If there are too many dirty buffers, we wake up the update process
 	   now so as to ensure that there are still clean buffers available
 	   for user processes to use (and dirty) */
+
+	if (nr_buffers_type[BUF_DIRTY] > nr_buffers * bdf_prm.b_un.nfract/100)
+		wakeup_bdflush(1);
 	
 	/* We are going to try to locate this much memory */
 	needed = bdf_prm.b_un.nrefill * size;  
@@ -660,7 +677,9 @@ static void refill_freelist(int size)
 	}
 
 repeat:
+#if defined(__SMP__) && defined(__i386__)
 	allow_interrupts();
+#endif
 	recover_reusable_buffer_heads();
 	if(needed <= 0)
 		return;
@@ -729,7 +748,9 @@ repeat:
 	 * In order to protect our reserved pages, 
 	 * return now if we got any buffers.
 	 */
+#if defined(__SMP__) && defined(__i386__)
 	allow_interrupts();
+#endif
 	if (free_list[BUFSIZE_INDEX(size)])
 		return;
 
@@ -765,7 +786,9 @@ struct buffer_head * getblk(kdev_t dev, int block, int size)
 	   now so as to ensure that there are still clean buffers available
 	   for user processes to use (and dirty) */
 repeat:
+#if defined(__SMP__) && defined(__i386__)
 	allow_interrupts();
+#endif
 	bh = get_hash_table(dev, block, size);
 	if (bh) {
 		if (!buffer_dirty(bh)) {
@@ -796,7 +819,9 @@ get_free:
 	return bh;
 
 refill:
+#if defined(__SMP__) && defined(__i386__)
 	allow_interrupts();
+#endif
 	refill_freelist(size);
 	if (!find_buffer(dev,block,size))
 		goto get_free;
@@ -867,8 +892,9 @@ void refile_buffer(struct buffer_head * buf)
  */
 void __brelse(struct buffer_head * buf)
 {
+#ifndef BUFFER_NOBLOCK
 	wait_on_buffer(buf);
-
+#endif
 	/* If dirty, mark the time this buffer should be written back */
 	set_writetime(buf, 0);
 	refile_buffer(buf);
@@ -1213,7 +1239,13 @@ int brw_page(int rw, struct page *page, kdev_t dev, int b[], int size, int bmap)
 		if (waitqueue_active(&buffer_wait))
 			wake_up(&buffer_wait);
 	}
+
+	/* do_no_page and do_swap_page take care of tsk->maj_flt.
+		I believe this is fixed in 2.1.x.   GG */
+
+#if 0	
 	++current->maj_flt;
+#endif
 	return 0;
 }
 
@@ -1553,8 +1585,9 @@ asmlinkage int sync_old_buffers(void)
 		ndirty = 0;
 		nwritten = 0;
 	repeat:
+#if defined(__SMP__) && defined(__i386__)
 		allow_interrupts();
-
+#endif
 		bh = lru_list[nlist];
 		if(bh) 
 			 for (i = nr_buffers_type[nlist]; i-- > 0; bh = next) {
@@ -1594,7 +1627,7 @@ asmlinkage int sync_old_buffers(void)
 	if (ncount) printk("sync_old_buffers: %d dirty buffers not on dirty list\n", ncount);
 	printk("Wrote %d/%d buffers\n", nwritten, ndirty);
 #endif
-	
+	run_task_queue(&tq_disk);
 	return 0;
 }
 
@@ -1694,8 +1727,9 @@ int bdflush(void * unused)
 			 ndirty = 0;
 			 refilled = 0;
 		 repeat:
+#if defined(__SMP__) && defined(__i386__)
 			 allow_interrupts();
-
+#endif
 			 bh = lru_list[nlist];
 			 if(bh) 
 				  for (i = nr_buffers_type[nlist]; i-- > 0 && ndirty < bdf_prm.b_un.ndirty; 

@@ -283,6 +283,7 @@ extern struct wait_queue * keypress_wait;
 extern unsigned long con_init(unsigned long);
 
 extern int rs_init(void);
+extern int pci_rs_init(void);
 extern int lp_init(void);
 extern int pty_init(void);
 extern int tty_init(void);

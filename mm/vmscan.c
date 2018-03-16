@@ -5,7 +5,7 @@
  *
  *  Swap reorganised 29.12.95, Stephen Tweedie.
  *  kswapd added: 7.1.96  sct
- *  Version: $Id: vmscan.c,v 1.4.2.2 1996/01/20 18:22:47 linux Exp $
+ *  Version: $Id: vmscan.c,v 1.5 1998/02/07 23:48:21 davem Exp $
  */
 
 #include <linux/mm.h>
@@ -123,7 +123,7 @@ static inline int try_to_swap_out(struct task_struct * tsk, struct vm_area_struc
 			if (!(entry = get_swap_page()))
 				return 0;
 			vma->vm_mm->rss--;
-			flush_cache_page(vma, address);
+			flush_cache_page(vma, address, pte);
 			set_pte(page_table, __pte(entry));
 			flush_tlb_page(vma, address);
 			tsk->nswap++;
@@ -139,14 +139,14 @@ static inline int try_to_swap_out(struct task_struct * tsk, struct vm_area_struc
 			return 0;
 		}
 		vma->vm_mm->rss--;
-		flush_cache_page(vma, address);
+		flush_cache_page(vma, address, pte);
 		set_pte(page_table, __pte(entry));
 		flush_tlb_page(vma, address);
 		free_page(page);
 		return 1;
 	} 
 	vma->vm_mm->rss--;
-	flush_cache_page(vma, address);
+	flush_cache_page(vma, address, pte);
 	pte_clear(page_table);
 	flush_tlb_page(vma, address);
 	entry = page_unuse(page);
@@ -440,7 +440,7 @@ int try_to_free_page(int priority, int dma, int wait)
 void kswapd_setup(void)
 {
        int i;
-       char *revision="$Revision: 1.4.2.2 $", *s, *e;
+       char *revision="$Revision: 1.5 $", *s, *e;
 
        if ((s = strchr(revision, ':')) &&
            (e = strchr(s, '$')))

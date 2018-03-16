@@ -4,7 +4,7 @@
  * Author: Rickard E. Faith, faith@cs.unc.edu
  * Copyright 1992, 1993, 1994, 1995, 1996 Rickard E. Faith
  *
- * $Id: fdomain.c,v 5.44 1996/08/08 18:58:53 root Exp $
+ * $Id: fdomain.c,v 1.2 1997/11/29 02:01:49 davem Exp $
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -276,7 +276,7 @@ struct proc_dir_entry proc_scsi_fdomain = {
     S_IFDIR | S_IRUGO | S_IXUGO, 2
 };
   
-#define VERSION          "$Revision: 5.44 $"
+#define VERSION          "$Revision: 1.2 $"
 
 /* START OF USER DEFINABLE OPTIONS */
 

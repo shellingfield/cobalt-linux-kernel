@@ -1,4 +1,4 @@
-/* $Id: init_me.c,v 1.3 1996/04/21 10:30:09 davem Exp $
+/* $Id: init_me.c,v 1.1.1.1 1997/10/27 22:44:01 davem Exp $
  * init_me.c:  Initialize empirical constants and gather some info from
  *             the boot prom.
  *

@@ -1,4 +1,4 @@
-/* $Id: aztcd.h,v 2.50 1996/05/17 16:15:43 root Exp root $
+/* $Id: aztcd.h,v 1.1.1.1 1997/10/27 22:43:19 davem Exp $
  *
  * Definitions for a AztechCD268 CD-ROM interface
  *	Copyright (C) 1994, 1995  Werner Zimmermann

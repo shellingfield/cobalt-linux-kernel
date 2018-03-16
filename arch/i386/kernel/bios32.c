@@ -1,7 +1,7 @@
 /*
  * bios32.c - BIOS32, PCI BIOS functions.
  *
- * $Id: bios32.c,v 1.3.2.4 1997/08/02 22:24:23 mj Exp $
+ * $Id: bios32.c,v 1.2 1997/11/29 02:02:06 davem Exp $
  *
  * Sponsored by
  *	iX Multiuser Multitasking Magazine

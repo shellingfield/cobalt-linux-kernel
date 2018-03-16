@@ -1,29 +1,24 @@
+/*
+ * Linux/MIPS specific definitions for signals.
+ *
+ * This file is subject to the terms and conditions of the GNU General Public
+ * License.  See the file "COPYING" in the main directory of this archive
+ * for more details.
+ *
+ * Copyright (C) 1995, 1996, 1997 by Ralf Baechle
+ *
+ * $Id: signal.h,v 1.3 1998/09/11 12:16:40 davem Exp $
+ */
 #ifndef __ASM_MIPS_SIGNAL_H
 #define __ASM_MIPS_SIGNAL_H
 
-/*
- * For now ...
- */
-#include <linux/types.h>
-typedef __u64	sigset_t;
+#include <asm/sgidefs.h>
 
-#if 0
-/*
- * This is what we should really use but the kernel can't handle
- * a non-scalar type yet.  Since we use 64 signals only anyway we
- * just use __u64 and pad another 64 bits in the kernel for now ...
- */
-typedef struct {
-	unsigned int	sigbits[4];
-} sigset_t;
-#endif
+typedef unsigned long sigset_t;
 
-#define _NSIG		65
+#define _NSIG		32
 #define NSIG		_NSIG
 
-/*
- * For 1.3.0 Linux/MIPS changed the signal numbers to be compatible the ABI.
- */
 #define SIGHUP		 1	/* Hangup (POSIX).  */
 #define SIGINT		 2	/* Interrupt (ANSI).  */
 #define SIGQUIT		 3	/* Quit (POSIX).  */
@@ -68,15 +63,15 @@ typedef struct {
  * SA_RESTART flag to get restarting signals (which were the default long ago)
  * SA_SHIRQ flag is for shared interrupt support on PCI and EISA.
  */
-#define SA_STACK	0x1
-#define SA_ONSTACK	SA_STACK
-#define SA_RESTART	0x4
-#define SA_NOCLDSTOP	0x20000
-/* Non ABI signals */
-#define SA_INTERRUPT	0x01000000
-#define SA_NOMASK	0x02000000
-#define SA_ONESHOT	0x04000000
-#define SA_SHIRQ	0x08000000
+#define SA_NOCLDSTOP	1
+#define SA_SHIRQ	0x04000000
+#define SA_STACK	0x08000000
+#define SA_RESTART	0x10000000
+#define SA_INTERRUPT	0x20000000
+#define SA_NOMASK	0x40000000
+#define SA_ONESHOT	0x80000000
+
+#define SA_ONSTACK	SA_STACK	/* alias */
 
 #ifdef __KERNEL__
 /*
@@ -87,11 +82,13 @@ typedef struct {
  */
 #define SA_PROBE SA_ONESHOT
 #define SA_SAMPLE_RANDOM SA_RESTART
-#endif
+#endif /* __KERNEL__ */
 
-#define SIG_BLOCK          1	/* for blocking signals */
-#define SIG_UNBLOCK        2	/* for unblocking signals */
-#define SIG_SETMASK        3	/* for setting the signal mask */
+#define SIG_BLOCK	1	/* for blocking signals */
+#define SIG_UNBLOCK	2	/* for unblocking signals */
+#define SIG_SETMASK	3	/* for setting the signal mask */
+#define SIG_SETMASK32	256	/* Goodie from SGI for BSD compatibility:
+				   set only the low 32 bit of the sigset.  */
 
 /* Type of a signal handler.  */
 typedef void (*__sighandler_t)(int);
@@ -105,19 +102,16 @@ struct sigaction {
 	unsigned int	sa_flags;
 	__sighandler_t	sa_handler;
 	sigset_t	sa_mask;
-	/*
-	 * To keep the ABI structure size we have to fill a little gap ...
-	 */
-	unsigned int	sa_mask_pad[2];
+	unsigned int	__pad0[3];	/* reserved, keep size constant */
 
 	/* Abi says here follows reserved int[2] */
 	void		(*sa_restorer)(void);
-#if __mips < 3
+#if (_MIPS_ISA == _MIPS_ISA_MIPS1) || (_MIPS_ISA == _MIPS_ISA_MIPS2)
 	/*
 	 * For 32 bit code we have to pad struct sigaction to get
 	 * constant size for the ABI
 	 */
-	int		pad0[1];	/* reserved */
+	int		__pad1[1];	/* reserved */
 #endif
 };
 
@@ -125,4 +119,26 @@ struct sigaction {
 #include <asm/sigcontext.h>
 #endif
 
-#endif /* __ASM_MIPS_SIGNAL_H */
+#if defined (__KERNEL__) || defined (__USE_MISC)
+/*
+ * The following break codes are or were in use for specific purposes in
+ * other MIPS operating systems.  Linux/MIPS doesn't use all of them.  The
+ * unused ones are here as placeholders; we might encounter them in
+ * non-Linux/MIPS object files or make use of them in the future.
+ */
+#define BRK_USERBP	0	/* User bp (used by debuggers) */
+#define BRK_KERNELBP	1	/* Break in the kernel */
+#define BRK_ABORT	2	/* Sometimes used by abort(3) to SIGIOT */
+#define BRK_BD_TAKEN	3	/* For bd slot emulation - not implemented */
+#define BRK_BD_NOTTAKEN	4	/* For bd slot emulation - not implemented */
+#define BRK_SSTEPBP	5	/* User bp (used by debuggers) */
+#define BRK_OVERFLOW	6	/* Overflow check */
+#define BRK_DIVZERO	7	/* Divide by zero check */
+#define BRK_RANGE	8	/* Range error check */
+#define BRK_STACKOVERFLOW 9	/* For Ada stackchecking */
+#define BRK_NORLD	10	/* No rld found - not used by Linux/MIPS */
+#define _BRK_THREADBP	11	/* For threads, user bp (used by debuggers) */
+#define BRK_MULOVF	1023	/* Multiply overflow */
+#endif /* defined (__KERNEL__) || defined (__USE_MISC) */
+
+#endif /* !defined (__ASM_MIPS_SIGNAL_H) */

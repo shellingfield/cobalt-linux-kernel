@@ -1,4 +1,4 @@
-/* $Id: resource.h,v 1.5 1995/11/25 02:32:35 davem Exp $
+/* $Id: resource.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $
  * resource.h: Resource definitions.
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

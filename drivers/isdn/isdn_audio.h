@@ -1,4 +1,4 @@
-/* $Id: isdn_audio.h,v 1.5 1997/02/03 22:45:21 fritz Exp $
+/* $Id: isdn_audio.h,v 1.2 1997/11/29 02:01:36 davem Exp $
 
  * Linux ISDN subsystem, audio conversion and compression (linklevel).
  *
@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_audio.h,v $
+ * Revision 1.2  1997/11/29 02:01:36  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.5  1997/02/03 22:45:21  fritz
  * Reformatted according CodingStyle
  *

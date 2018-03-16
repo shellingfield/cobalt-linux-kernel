@@ -11,6 +11,8 @@
  *  Send complaints, suggestions etc. to <andy@waldorf-gmbh.de>
  *
  *  Copyright (C) 1995 Andreas Busse
+ *
+ * $Id: gdb-stub.c,v 1.2 1997/10/27 23:26:19 davem Exp $
  */
 
 /*
@@ -65,13 +67,14 @@
  */
 
 #include <linux/string.h>
-#include <linux/signal.h>
 #include <linux/kernel.h>
+#include <linux/signal.h>
+#include <linux/sched.h>
+#include <linux/mm.h>
 
 #include <asm/asm.h>
 #include <asm/mipsregs.h>
-#include <asm/segment.h>
-#include <asm/cachectl.h>
+#include <asm/pgtable.h>
 #include <asm/system.h>
 #include <asm/gdb-stub.h>
 
@@ -97,13 +100,11 @@ extern void adel(void);
 
 static void getpacket(char *buffer);
 static void putpacket(char *buffer);
-static void set_mem_fault_trap(int enable);
 static int computeSignal(int tt);
 static int hex(unsigned char ch);
 static int hexToInt(char **ptr, int *intValue);
 static unsigned char *mem2hex(char *mem, char *buf, int count, int may_fault);
 void handle_exception(struct gdb_regs *regs);
-static void show_gdbregs(struct gdb_regs *regs);
 
 /*
  * BUFMAX defines the maximum number of characters in inbound/outbound buffers
@@ -240,6 +241,21 @@ static void putpacket(char *buffer)
  */
 static volatile int mem_err = 0;
 
+
+#if 0
+static void set_mem_fault_trap(int enable)
+{
+  mem_err = 0;
+
+#if 0
+  if (enable)
+    exceptionHandler(9, fltr_set_mem_err);
+  else
+    exceptionHandler(9, trap_low);
+#endif  
+}
+#endif /* dead code */
+
 /*
  * Convert the memory pointed to by mem into hex, placing result in buf.
  * Return a pointer to the last char put in buf (null), in case of mem fault,
@@ -326,7 +342,10 @@ static struct hard_trap_info
 void set_debug_traps(void)
 {
 	struct hard_trap_info *ht;
+	unsigned long flags;
+	unsigned char c;
 
+	save_and_cli(flags);
 	for (ht = hard_trap_info; ht->tt && ht->signo; ht++)
 		set_except_vector(ht->tt, trap_low);
   
@@ -334,9 +353,14 @@ void set_debug_traps(void)
 	 * In case GDB is started before us, ack any packets
 	 * (presumably "$?#xx") sitting there.
 	 */
+	while((c = getDebugChar()) != '$');
+	while((c = getDebugChar()) != '#');
+	c = getDebugChar(); /* eat first csum byte */
+	c = getDebugChar(); /* eat second csum byte */
+	putDebugChar('+'); /* ack it */
 
-	putDebugChar ('+');
 	initialized = 1;
+	restore_flags(flags);
 
 	breakpoint();
 }
@@ -351,19 +375,6 @@ void set_debug_traps(void)
 extern void fltr_set_mem_err(void)
 {
   /* FIXME: Needs to be written... */
-}
-
-
-static void set_mem_fault_trap(int enable)
-{
-  mem_err = 0;
-
-#if 0
-  if (enable)
-    exceptionHandler(9, fltr_set_mem_err);
-  else
-    exceptionHandler(9, trap_low);
-#endif  
 }
 
 /*
@@ -405,6 +416,38 @@ static int hexToInt(char **ptr, int *intValue)
 
 	return (numChars);
 }
+
+
+#if 0
+/*
+ * Print registers (on target console)
+ * Used only to debug the stub...
+ */
+void show_gdbregs(struct gdb_regs * regs)
+{
+	/*
+	 * Saved main processor registers
+	 */
+	printk("$0 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	       regs->reg0, regs->reg1, regs->reg2, regs->reg3,
+               regs->reg4, regs->reg5, regs->reg6, regs->reg7);
+	printk("$8 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	       regs->reg8, regs->reg9, regs->reg10, regs->reg11,
+               regs->reg12, regs->reg13, regs->reg14, regs->reg15);
+	printk("$16: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	       regs->reg16, regs->reg17, regs->reg18, regs->reg19,
+               regs->reg20, regs->reg21, regs->reg22, regs->reg23);
+	printk("$24: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
+	       regs->reg24, regs->reg25, regs->reg26, regs->reg27,
+	       regs->reg28, regs->reg29, regs->reg30, regs->reg31);
+
+	/*
+	 * Saved cp0 registers
+	 */
+	printk("epc  : %08lx\nStatus: %08lx\nCause : %08lx\n",
+	       regs->cp0_epc, regs->cp0_status, regs->cp0_cause);
+}
+#endif /* dead code */
 
 /*
  * This function does all command processing for interfacing to gdb.  It
@@ -605,7 +648,7 @@ void handle_exception (struct gdb_regs *regs)
 			 * NB: We flush both caches, just to be sure...
 			 */
 
-			sys_cacheflush((void *)KSEG0,KSEG1-KSEG0,BCACHE);
+			flush_cache_all();
 			return;
 			/* NOTREACHED */
 			break;
@@ -716,33 +759,4 @@ void adel(void)
 			la	$8,0x80000001
 			lw	$9,0($8)
 	");
-}
-
-/*
- * Print registers (on target console)
- * Used only to debug the stub...
- */
-void show_gdbregs(struct gdb_regs * regs)
-{
-	/*
-	 * Saved main processor registers
-	 */
-	printk("$0 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
-	       regs->reg0, regs->reg1, regs->reg2, regs->reg3,
-               regs->reg4, regs->reg5, regs->reg6, regs->reg7);
-	printk("$8 : %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
-	       regs->reg8, regs->reg9, regs->reg10, regs->reg11,
-               regs->reg12, regs->reg13, regs->reg14, regs->reg15);
-	printk("$16: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
-	       regs->reg16, regs->reg17, regs->reg18, regs->reg19,
-               regs->reg20, regs->reg21, regs->reg22, regs->reg23);
-	printk("$24: %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
-	       regs->reg24, regs->reg25, regs->reg26, regs->reg27,
-	       regs->reg28, regs->reg29, regs->reg30, regs->reg31);
-
-	/*
-	 * Saved cp0 registers
-	 */
-	printk("epc  : %08lx\nStatus: %08lx\nCause : %08lx\n",
-	       regs->cp0_epc, regs->cp0_status, regs->cp0_cause);
 }

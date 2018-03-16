@@ -1,4 +1,4 @@
-/* $Id: teles0.c,v 1.8 1997/04/13 19:54:04 keil Exp $
+/* $Id: teles0.c,v 1.1 1997/11/29 02:01:35 davem Exp $
 
  * teles0.c     low level stuff for Teles Memory IO isdn cards
  *              based on the teles driver from Jan den Ouden
@@ -10,6 +10,9 @@
  *              Beat Doebeli
  *
  * $Log: teles0.c,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.8  1997/04/13 19:54:04  keil
  * Change in IRQ check delay for SMP
  *
@@ -46,7 +49,7 @@
 
 extern const char *CardType[];
 
-const char *teles0_revision = "$Revision: 1.8 $";
+const char *teles0_revision = "$Revision: 1.1 $";
 
 #define byteout(addr,val) outb_p(val,addr)
 #define bytein(addr) inb_p(addr)

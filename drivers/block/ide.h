@@ -5,6 +5,7 @@
  */
 
 #include <linux/config.h>
+#include <asm/ide.h>
 
 /*
  * This is the multiple IDE interface driver, as evolved from hd.c.  
@@ -145,7 +146,7 @@ typedef unsigned char	byte;	/* used everywhere */
 #define PARTN_MASK	((1<<PARTN_BITS)-1)	/* a useful bit mask */
 #define MAX_DRIVES	2	/* per interface; 2 assumed by lots of code */
 #ifndef MAX_HWIFS
-#define MAX_HWIFS	4	/* an arbitrary, but realistic limit */
+#error "MAX_HWIFS is not defined!"
 #endif
 #define SECTOR_WORDS	(512 / 4)	/* number of 32bit words per sector */
 
@@ -428,14 +429,14 @@ typedef void (ide_selectproc_t) (ide_drive_t *);
 typedef enum {	ide_unknown,	ide_generic,	ide_triton,
 		ide_cmd640,	ide_dtc2278,	ide_ali14xx,
 		ide_qd6580,	ide_umc8672,	ide_ht6560b,
-		ide_promise }
+		ide_promise,	ide_cobalt }
 	hwif_chipset_t;
 
 typedef struct hwif_s {
 	struct hwif_s	*next;		/* for linked-list in ide_hwgroup_t */
 	void		*hwgroup;	/* actually (ide_hwgroup_t *) */
-	unsigned short	io_base;	/* base io port addr */
-	unsigned short	ctl_port;	/* usually io_base+0x206 */
+	ide_ioreg_t	io_base;	/* base io port addr */
+	ide_ioreg_t	ctl_port;	/* usually io_base+0x206 */
 	ide_drive_t	drives[MAX_DRIVES];	/* drive info */
 	struct gendisk	*gd;		/* gendisk structure */
 	ide_tuneproc_t	*tuneproc;	/* routine to tune PIO mode for drives */
@@ -444,7 +445,7 @@ typedef struct hwif_s {
 #endif
 	ide_dmaproc_t	*dmaproc;	/* dma read/write/abort routine */
 	unsigned long	*dmatable;	/* dma physical region descriptor table */
-	unsigned short	dma_base;	/* base addr for dma ports (triton) */
+	ide_ioreg_t	dma_base;	/* base addr for dma ports (triton/cobalt) */
 	byte		irq;		/* our irq number */
 	byte		major;		/* our major number */
 	char 		name[5];	/* name of interface, eg. "ide0" */
@@ -743,3 +744,7 @@ void idescsi_ide_release (struct inode *inode, struct file *filp, ide_drive_t *d
 #ifdef CONFIG_BLK_DEV_TRITON
 void ide_init_triton (byte, byte);
 #endif /* CONFIG_BLK_DEV_TRITON */
+
+#ifdef CONFIG_BLK_DEV_COBALT
+void ide_init_cobalt(void);
+#endif /* CONFIG_BLK_DEV_COBALT */

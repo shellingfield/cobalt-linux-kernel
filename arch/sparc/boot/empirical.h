@@ -1,4 +1,4 @@
-/* $Id: empirical.h,v 1.2 1996/04/23 01:53:42 davem Exp $
+/* $Id: empirical.h,v 1.1.1.1 1997/10/27 22:44:01 davem Exp $
  * empirical.h:  Nasty hacks....
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

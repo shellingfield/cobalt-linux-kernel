@@ -22,6 +22,8 @@
 #include <linux/ldt.h>
 #include <linux/smp.h>
 
+#include <asm/pgtable.h>
+#include <asm/mmu_context.h>
 #include <asm/segment.h>
 #include <asm/system.h>
 #include <asm/pgtable.h>
@@ -81,14 +83,15 @@ static inline int dup_mmap(struct mm_struct * mm)
 {
 	struct vm_area_struct * mpnt, **p, *tmp;
 
+	flush_cache_mm(current->mm);
 	mm->mmap = NULL;
 	p = &mm->mmap;
 	for (mpnt = current->mm->mmap ; mpnt ; mpnt = mpnt->vm_next) {
-		tmp = (struct vm_area_struct *) kmalloc(sizeof(struct vm_area_struct), GFP_KERNEL);
-		if (!tmp) {
-			/* exit_mmap is called by the caller */
-			return -ENOMEM;
-		}
+		tmp = (struct vm_area_struct *)
+			kmalloc(sizeof(struct vm_area_struct), GFP_KERNEL);
+
+		if (!tmp)
+			goto fail_and_flush;
 		*tmp = *mpnt;
 		tmp->vm_flags &= ~VM_LOCKED;
 		tmp->vm_mm = mm;
@@ -104,8 +107,9 @@ static inline int dup_mmap(struct mm_struct * mm)
 			/* link into the linked list for exit_mmap */
 			*p = tmp;
 			p = &tmp->vm_next;
+
 			/* exit_mmap is called by the caller */
-			return -ENOMEM;
+			goto fail_just_exit;
 		}
 		if (tmp->vm_ops && tmp->vm_ops->open)
 			tmp->vm_ops->open(tmp);
@@ -115,6 +119,11 @@ static inline int dup_mmap(struct mm_struct * mm)
 	build_mmap_avl(mm);
 	flush_tlb_mm(current->mm);
 	return 0;
+
+fail_and_flush:
+	flush_tlb_mm(current->mm);
+fail_just_exit:
+	return -ENOMEM;
 }
 
 static inline int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
@@ -124,6 +133,7 @@ static inline int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
 		if (!mm)
 			return -ENOMEM;
 		*mm = *current->mm;
+		init_new_context(mm);
 		mm->count = 1;
 		mm->def_flags = 0;
 		mm->mmap_sem = MUTEX;

@@ -1,4 +1,4 @@
-/* $Id: ix1_micro.h,v 1.1 1997/01/27 15:42:48 keil Exp $
+/* $Id: ix1_micro.h,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * ix1_micro.h  low level stuff for ITK ix1-micro Rev.2 isdn cards
  *
@@ -8,6 +8,9 @@
  to the original file teles.c)
  *
  * $Log: ix1_micro.h,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1997/01/27 15:42:48  keil
  * first version
  *

@@ -9,9 +9,9 @@
 #include <linux/sys.h>
 
 #include <asm/asm.h>
-#include <asm/segment.h>
 #include <asm/mipsregs.h>
 #include <asm/mipsconfig.h>
+#include <asm/regdef.h>
 #include <asm/stackframe.h>
 #include <asm/gdb-stub.h>
 
@@ -33,13 +33,14 @@
 		 */
 		lui	k1,%hi(kernelsp)
 		lw	k1,%lo(kernelsp)(k1)
-1:		move	k0,sp
+1:
+		move	k0,sp
 		subu	sp,k1,GDB_FR_SIZE
 		sw	k0,GDB_FR_REG29(sp)
 		sw	v0,GDB_FR_REG2(sp)
 
 /*
- * first save the CP0 and special registers
+ * First save the CP0 and special registers
  */
 
 		mfc0	v0,CP0_STATUS
@@ -97,11 +98,12 @@
 /*
  * Followed by the floating point registers
  */
-		mfc0	v0,CP0_STATUS		/* check if the FPU is enabled */
+		mfc0	v0,CP0_STATUS		/* FPU enabled? */
 		srl	v0,v0,16
 		andi	v0,v0,(ST0_CU1 >> 16)
+
 		beqz	v0,2f			/* disabled, skip */
-		nop
+		 nop
 
 		swc1	$0,GDB_FR_FPR0(sp)
 		swc1	$1,GDB_FR_FPR1(sp)
@@ -146,10 +148,11 @@
 		sw	v0,GDB_FR_FIR(sp)
 
 /*
- * current stack frame ptr
+ * Current stack frame ptr
  */
 
-2:		sw	sp,GDB_FR_FRP(sp)
+2:
+		sw	sp,GDB_FR_FRP(sp)
 
 /*
  * CP0 registers (R4000/R4400 unused registers skipped)
@@ -175,15 +178,16 @@
 		.set	at
 
 /*
- * continue with the higher level handler
+ * Continue with the higher level handler
  */
 
 		move	a0,sp
+
 		jal	handle_exception
-		nop
+		 nop
 
 /*
- * restore all writable registers, in reverse order
+ * Restore all writable registers, in reverse order
  */
 
 		.set	noat
@@ -207,8 +211,9 @@
 		mfc0	v0,CP0_STATUS		/* check if the FPU is enabled */
 		srl	v0,v0,16
 		andi	v0,v0,(ST0_CU1 >> 16)
+
 		beqz	v0,3f			/* disabled, skip */
-		nop
+		 nop
 
 		lwc1	$31,GDB_FR_FPR31(sp)
 		lwc1	$30,GDB_FR_FPR30(sp)
@@ -247,7 +252,8 @@
  * Now the CP0 and integer registers
  */
 
-3:		mfc0	t0,CP0_STATUS
+3:
+		mfc0	t0,CP0_STATUS
 		ori	t0,0x1f
 		xori	t0,0x1f
 		mtc0	t0,CP0_STATUS
@@ -292,9 +298,9 @@
 		lw	$1,GDB_FR_REG1(sp)
 		lw	sp,GDB_FR_REG29(sp)		/* Deallocate stack */
 
-		ERET
+		.set	mips3
+		eret
+		.set	mips0
 		.set	at
 		.set	reorder
 		END(trap_low)
-
-/* end of file gdb-low.S */

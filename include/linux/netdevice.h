@@ -57,6 +57,11 @@
 
 #include <linux/skbuff.h>
 
+#ifdef CONFIG_COBALT_27
+typedef int (*linkcheck_func_t)(void *cookie);
+extern int lcd_register_linkcheck_func(int iface_num, void *func, void *cookie);
+#endif /* CONFIG_COBALT_27 */
+
 /*
  *	We tag multicasts with these structures.
  */

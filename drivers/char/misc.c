@@ -70,6 +70,7 @@ extern void watchdog_init(void);
 extern void wdt_init(void);
 extern void pcwatchdog_init(void);
 extern int rtc_init(void);
+extern int lcd_init(void);
 extern int con_get_info(int *mode, int *shift, int *col, int *row,
 			struct tty_struct **tty);
 
@@ -237,6 +238,9 @@ int misc_init(void)
 #endif
 #ifdef CONFIG_RTC
 	rtc_init();
+#endif
+#ifdef CONFIG_COBALT_LCD
+	lcd_init();
 #endif
 #endif /* !MODULE */
 	if (register_chrdev(MISC_MAJOR,"misc",&misc_fops)) {

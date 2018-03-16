@@ -1,5 +1,5 @@
 /*
- *  $Id: message.h,v 1.1 1996/11/07 13:07:47 fritz Exp $
+ *  $Id: message.h,v 1.1 1997/11/29 02:01:31 davem Exp $
  *  Copyright (C) 1996  SpellCaster Telecommunications Inc.
  *
  *  message.h - structures, macros and defines useful for sending

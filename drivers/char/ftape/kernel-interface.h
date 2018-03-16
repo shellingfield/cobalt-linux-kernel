@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/kernel-interface.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/kernel-interface.h,v $
+ $Author: davem $
  *
- $Revision: 1.24 $
- $Date: 1995/04/30 13:15:14 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:42 $
+ $State: Exp $
  *
  * ----Description----
  *

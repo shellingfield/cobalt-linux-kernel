@@ -1,11 +1,14 @@
 /*
- * $Id: compat.h,v 1.1 1997/03/04 21:50:36 calle Exp $
+ * $Id: compat.h,v 1.1 1997/11/29 02:01:33 davem Exp $
  * 
  * Headerfile for Compartibility between different kernel versions
  * 
  * (c) Copyright 1996 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: compat.h,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1997/03/04 21:50:36  calle
  * Frirst version in isdn4linux
  *

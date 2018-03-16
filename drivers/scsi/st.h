@@ -2,7 +2,7 @@
 #ifndef _ST_H
 	#define _ST_H
 /*
-	$Header: /usr/src/linux/kernel/blk_drv/scsi/RCS/st.h,v 1.1 1992/04/24 18:01:50 root Exp root $
+	$Header: /fargo/cvs/linux/drivers/scsi/st.h,v 1.1.1.1 1997/10/27 22:43:43 davem Exp $
 */
 
 #ifndef _SCSI_H

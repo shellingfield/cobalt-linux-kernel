@@ -1,4 +1,4 @@
-/* $Id: icn.c,v 1.45 1997/06/21 10:42:06 fritz Exp $
+/* $Id: icn.c,v 1.2 1997/11/29 02:02:11 davem Exp $
 
  * ISDN low-level module for the ICN active ISDN-Card.
  *
@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: icn.c,v $
+ * Revision 1.2  1997/11/29 02:02:11  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.45  1997/06/21 10:42:06  fritz
  * Added availability to select leased mode on only one channel.
  *
@@ -193,7 +196,7 @@
 #undef MAP_DEBUG
 
 static char
-*revision = "$Revision: 1.45 $";
+*revision = "$Revision: 1.2 $";
 
 static int icn_addcard(int, char *, char *);
 

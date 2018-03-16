@@ -1,4 +1,4 @@
-/* $Id: vac-ops.h,v 1.11 1996/04/25 06:13:38 davem Exp $ */
+/* $Id: vac-ops.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $ */
 #ifndef _SPARC_VAC_OPS_H
 #define _SPARC_VAC_OPS_H
 

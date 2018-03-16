@@ -1,4 +1,4 @@
-/* $Id: isdnl1.c,v 1.15 1997/05/27 15:17:55 fritz Exp $
+/* $Id: isdnl1.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * isdnl1.c     common low level stuff for Siemens Chipsetbased isdn cards
  *              based on the teles driver from Jan den Ouden
@@ -11,6 +11,9 @@
  *
  *
  * $Log: isdnl1.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.15  1997/05/27 15:17:55  fritz
  * Added changes for recent 2.1.x kernels:
  *   changed return type of isdn_close
@@ -64,7 +67,7 @@
  *
  */
 
-const char *l1_revision = "$Revision: 1.15 $";
+const char *l1_revision = "$Revision: 1.1 $";
 
 #define __NO_VERSION__
 #include <linux/config.h>

@@ -1,4 +1,4 @@
-/* $Id: isdn_cards.c,v 1.6 1997/04/23 18:56:03 fritz Exp $
+/* $Id: isdn_cards.c,v 1.2 1997/11/29 02:01:37 davem Exp $
 
  * Linux ISDN subsystem, initialization for non-modularized drivers.
  *
@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_cards.c,v $
+ * Revision 1.2  1997/11/29 02:01:37  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.6  1997/04/23 18:56:03  fritz
  * Old Teles driver removed, Changed doc and scripts accordingly.
  *

@@ -1,4 +1,4 @@
-/* $Id: isdn_ppp.c,v 1.28 1997/06/17 13:05:57 hipp Exp $
+/* $Id: isdn_ppp.c,v 1.2 1997/11/29 02:01:37 davem Exp $
  *
  * Linux ISDN subsystem, functions for synchronous PPP (linklevel).
  *
@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_ppp.c,v $
+ * Revision 1.2  1997/11/29 02:01:37  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.28  1997/06/17 13:05:57  hipp
  * Applied Eric's underflow-patches (slightly modified)
  * more compression changes (but disabled at the moment)
@@ -173,7 +176,7 @@ static int isdn_ppp_fill_mpqueue(isdn_net_dev *, struct sk_buff **skb,
 static void isdn_ppp_free_mpqueue(isdn_net_dev *);
 #endif
 
-char *isdn_ppp_revision = "$Revision: 1.28 $";
+char *isdn_ppp_revision = "$Revision: 1.2 $";
 
 static struct ippp_struct *ippp_table[ISDN_MAX_CHANNELS];
 static struct isdn_ppp_compressor *ipc_head = NULL;

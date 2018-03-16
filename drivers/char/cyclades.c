@@ -1,5 +1,5 @@
 static char rcsid[] =
-"$Revision: 1.36.3.9 $$Date: 1996/10/07 19:47:13 $";
+"$Revision: 1.1.1.1 $$Date: 1997/10/27 22:43:39 $";
 /*
  *  linux/drivers/char/cyclades.c
  *
@@ -24,6 +24,9 @@ static char rcsid[] =
  *   int cy_open(struct tty_struct *tty, struct file *filp);
  *
  * $Log: cyclades.c,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:39  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  * Revision 1.36.3.9  1996/10/07 19:47:13  bentson
  * add MOD_DEC_USE_COUNT in one return from cy_close (as
  * noted by Jon Lewis <jlewis@INORGANIC5.FDT.NET>)

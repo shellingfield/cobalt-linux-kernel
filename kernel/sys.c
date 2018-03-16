@@ -172,6 +172,7 @@ asmlinkage int sys_prof(void)
 
 extern void hard_reset_now(void);
 extern asmlinkage int sys_kill(int, int);
+extern void cobalt_machine_halt(void);
 
 /*
  * Reboot system call: for obvious reasons only root may call it,
@@ -191,6 +192,7 @@ asmlinkage int sys_reboot(int magic, int magic_too, int flag)
 #ifdef CONFIG_SCSI_GDTH
 		gdth_halt();
 #endif
+		*(volatile char *)0xbc000000 = 0x0f;
 		hard_reset_now();
 	} else if (flag == 0x89ABCDEF)
 		C_A_D = 1;
@@ -202,6 +204,7 @@ asmlinkage int sys_reboot(int magic, int magic_too, int flag)
 #if defined(CONFIG_APM) && defined(CONFIG_APM_POWER_OFF)
 		apm_set_power_state(APM_STATE_OFF);
 #endif
+		cobalt_machine_halt();
 		do_exit(0);
 	} else
 		return -EINVAL;

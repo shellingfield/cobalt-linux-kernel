@@ -1,11 +1,14 @@
 /*
- * $Id: b1capi.c,v 1.4.2.1 1997/07/12 08:18:59 calle Exp $
+ * $Id: b1capi.c,v 1.1 1997/11/29 02:01:32 davem Exp $
  * 
  * CAPI 2.0 Module for AVM B1-card.
  * 
  * (c) Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: b1capi.c,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.4.2.1  1997/07/12 08:18:59  calle
  * Correct bug in CARD_NR macro, so now more than one card will work.
  * Allow card reset, even if card is in running state.
@@ -52,7 +55,7 @@
 #include "capicmd.h"
 #include "capiutil.h"
 
-static char *revision = "$Revision: 1.4.2.1 $";
+static char *revision = "$Revision: 1.1 $";
 
 /* ------------------------------------------------------------- */
 

@@ -23,6 +23,12 @@
 
 /*
  * $Log: NCR5380.h,v $
+ * Revision 1.2  1998/06/13 10:59:43  davem
+ * Merge to 2.0.34
+ *
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  */
 
 #ifndef NCR5380_H

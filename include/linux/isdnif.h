@@ -1,4 +1,4 @@
-/* $Id: isdnif.h,v 1.20 1997/05/27 15:18:06 fritz Exp $
+/* $Id: isdnif.h,v 1.2 1997/11/29 02:02:00 davem Exp $
  *
  * Linux ISDN subsystem
  *
@@ -22,6 +22,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  * $Log: isdnif.h,v $
+ * Revision 1.2  1997/11/29 02:02:00  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.20  1997/05/27 15:18:06  fritz
  * Added changes for recent 2.1.x kernels:
  *   changed return type of isdn_close

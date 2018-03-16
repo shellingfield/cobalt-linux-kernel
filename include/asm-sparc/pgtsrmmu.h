@@ -1,4 +1,4 @@
-/* $Id: pgtsrmmu.h,v 1.17 1996/04/25 06:13:26 davem Exp $
+/* $Id: pgtsrmmu.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $
  * pgtsrmmu.h:  SRMMU page table defines and code.
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

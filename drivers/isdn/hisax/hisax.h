@@ -1,8 +1,11 @@
-/* $Id: hisax.h,v 1.13 1997/04/06 22:54:12 keil Exp $
+/* $Id: hisax.h,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  *   Basic declarations, defines and prototypes
  *
  * $Log: hisax.h,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.13  1997/04/06 22:54:12  keil
  * Using SKB's
  *

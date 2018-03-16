@@ -1,4 +1,4 @@
-/* $Id: sunos_ioctl.c,v 1.20 1996/04/25 06:09:08 davem Exp $
+/* $Id: sunos_ioctl.c,v 1.1.1.1 1997/10/27 22:44:02 davem Exp $
  * sunos_ioctl.c: The Linux Operating system: SunOS ioctl compatibility.
  * 
  * Copyright (C) 1995 Miguel de Icaza (miguel@nuclecu.unam.mx)

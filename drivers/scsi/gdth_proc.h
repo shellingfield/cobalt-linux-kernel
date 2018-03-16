@@ -2,7 +2,7 @@
 #define _GDTH_PROC_H
 
 /* gdth_proc.h 
- * $Id: gdth_proc.h,v 1.2 1997/02/21 08:08:51 achim Exp $
+ * $Id: gdth_proc.h,v 1.1 1997/11/29 02:01:44 davem Exp $
  */
 
 static int gdth_set_info(char *buffer,int length,int vh,int hanum,int busnum);

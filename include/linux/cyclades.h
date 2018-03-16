@@ -6,6 +6,9 @@
  *
  * This file contains the general definitions for the cyclades.c driver
  *$Log: cyclades.h,v $
+ *Revision 1.1.1.1  1997/10/27 22:43:19  davem
+ *Vanilla 2.0.30 kernel tree.
+ *
  * Revision 1.5  1995/11/13  21:13:31  bentson
  * changes suggested by Michael Chastain <mec@duracef.shout.net>
  * to support use of this file in non-kernel applications

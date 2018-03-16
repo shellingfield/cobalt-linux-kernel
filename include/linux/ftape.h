@@ -19,12 +19,12 @@ along with this program; see the file COPYING.  If not, write to
 the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/ftape.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/include/linux/ftape.h,v $
+ $Author: davem $
  *
- $Revision: 1.18 $
- $Date: 1995/05/06 16:11:53 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:20 $
+ $State: Exp $
  *
  *      This file contains global definitions, typedefs and macro's
  *      for the QIC-40/80 floppy-tape driver for Linux.

@@ -1,11 +1,14 @@
 /*
- * $Id: capi.c,v 1.4 1997/05/27 15:17:50 fritz Exp $
+ * $Id: capi.c,v 1.1 1997/11/29 02:01:32 davem Exp $
  *
  * CAPI 2.0 Interface for Linux
  *
  * Copyright 1996 by Carsten Paeth (calle@calle.in-berlin.de)
  *
  * $Log: capi.c,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.4  1997/05/27 15:17:50  fritz
  * Added changes for recent 2.1.x kernels:
  *   changed return type of isdn_close

@@ -111,11 +111,23 @@ unsigned long *create_elf_tables(char *p, int argc, int envc,
 {
 	unsigned long *argv, *envp, *dlinfo;
 	unsigned long *sp;
+#ifdef __mips__
+	unsigned long * csp;
+#endif
 
 	/*
 	 * Force 16 byte alignment here for generality.
 	 */
 	sp = (unsigned long *) (~15UL & (unsigned long) p);
+#ifdef __mips__
+	/* Make sure we will be aligned properly at the end of this. */
+	csp = sp;
+	csp -= exec ? DLINFO_ITEMS*2 : 2;
+	csp -= envc + 1;
+	csp -= argc+1;
+	if (!(((unsigned long) csp) & 4))
+	    sp--;
+#endif
 	sp -= exec ? DLINFO_ITEMS * 2 : 2;
 	dlinfo = sp;
 	sp -= envc + 1;
@@ -126,6 +138,8 @@ unsigned long *create_elf_tables(char *p, int argc, int envc,
 		put_user(envp, --sp);
 		put_user(argv, --sp);
 	}
+	put_user((unsigned long)argc,--sp);
+
 #define NEW_AUX_ENT(id, val) \
 	  put_user ((id), dlinfo++); \
 	  put_user ((val), dlinfo++)
@@ -148,7 +162,6 @@ unsigned long *create_elf_tables(char *p, int argc, int envc,
 	}
 	NEW_AUX_ENT(AT_NULL, 0);
 #undef NEW_AUX_ENT
-	put_user((unsigned long) argc, --sp);
 	current->mm->arg_start = (unsigned long) p;
 	while (argc-- > 0) {
 		put_user(p, argv++);
@@ -248,7 +261,12 @@ static unsigned long load_elf_interp(struct elfhdr *interp_elf_ex,
 				elf_prot |= PROT_WRITE;
 			if (eppnt->p_flags & PF_X)
 				elf_prot |= PROT_EXEC;
-			if (interp_elf_ex->e_type == ET_EXEC || load_addr_set) {
+			if (interp_elf_ex->e_type == ET_EXEC || load_addr_set ||
+#ifdef __mips__
+			    1) {    /* Always load the program interpreter absolute.  */
+#else
+			    0) {
+#endif
 				elf_type |= MAP_FIXED;
 				vaddr = eppnt->p_vaddr;
 			}
@@ -266,7 +284,7 @@ static unsigned long load_elf_interp(struct elfhdr *interp_elf_ex,
 				return ~0UL;
 			}
 			if (!load_addr_set && interp_elf_ex->e_type == ET_DYN) {
-				load_addr = error;
+				load_addr = (vaddr & 0xfffff000) - error;
 				load_addr_set = 1;
 			}
 			/*
@@ -400,8 +418,14 @@ static inline int do_load_elf_binary(struct linux_binprm *bprm, struct pt_regs *
 	     !bprm->inode->i_op->default_file_ops->mmap)) {
 		return -ENOEXEC;
 	}
-	/* Now read in all of the header information */
 
+#ifdef __mips__
+	/* IRIX binaries handled elsewhere. */
+	if(elf_ex.e_flags & EF_MIPS_ARCH)
+		return -ENOEXEC;
+#endif
+
+	/* Now read in all of the header information */
 	elf_phdata = (struct elf_phdr *) kmalloc(elf_ex.e_phentsize *
 					     elf_ex.e_phnum, GFP_KERNEL);
 	if (elf_phdata == NULL) {

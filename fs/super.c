@@ -920,6 +920,12 @@ asmlinkage int sys_mount(char * dev_name, char * dir_name, char * type,
 	return retval;
 }
 
+
+#ifdef BOOTLOADER
+/* assume linux/ tree is sitting inside rom/ tree */
+#include "../../include/diagdefs.h"
+#endif
+
 static void do_mount_root(void)
 {
 	struct file_system_type * fs_type;
@@ -1033,6 +1039,17 @@ static void do_mount_root(void)
 			return;
 		}
 	}
+
+#ifdef BOOTLOADER
+	printk("VFS: BOOTLOADER: Unable to mount root fs on %s, "
+		"setting disk_error (@ %p) to 1 "
+		"and jumping back to RAMCODE\n",
+		kdevname(ROOT_DEV), kDiskerrorAddr);
+
+	* ((int *) kDiskerrorAddr) = 1;
+	(* ((( void (*)(void)) (*(unsigned long *)kRAMCodeAddr))))();
+#endif
+
 	panic("VFS: Unable to mount root fs on %s",
 		kdevname(ROOT_DEV));
 }

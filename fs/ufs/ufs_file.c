@@ -6,7 +6,7 @@
  * Laboratory for Computer Science Research Computing Facility
  * Rutgers, The State University of New Jersey
  *
- * $Id: ufs_file.c,v 1.3 1996/04/25 09:12:02 davem Exp $
+ * $Id: ufs_file.c,v 1.1.1.1 1997/10/27 22:43:17 davem Exp $
  *
  */
 

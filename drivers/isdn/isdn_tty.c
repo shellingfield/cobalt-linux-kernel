@@ -1,4 +1,4 @@
-/* $Id: isdn_tty.c,v 1.41 1997/05/27 15:17:31 fritz Exp $
+/* $Id: isdn_tty.c,v 1.2 1997/11/29 02:01:38 davem Exp $
 
  * Linux ISDN subsystem, tty functions and AT-command emulator (linklevel).
  *
@@ -20,6 +20,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_tty.c,v $
+ * Revision 1.2  1997/11/29 02:01:38  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.41  1997/05/27 15:17:31  fritz
  * Added changes for recent 2.1.x kernels:
  *   changed return type of isdn_close
@@ -223,7 +226,7 @@ static int bit2si[8] =
 static int si2bit[8] =
 {4, 1, 4, 4, 4, 4, 4, 4};
 
-char *isdn_tty_revision = "$Revision: 1.41 $";
+char *isdn_tty_revision = "$Revision: 1.2 $";
 
 #define DLE 0x10
 #define ETX 0x03

@@ -1,4 +1,4 @@
-/* $Id: timer.h,v 1.12 1996/03/24 20:21:29 davem Exp $
+/* $Id: timer.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $
  * timer.h:  Definitions for the timer chips on the Sparc.
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

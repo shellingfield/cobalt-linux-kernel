@@ -1,4 +1,4 @@
-/* $Id: eexpress.c,v 1.13.2.2 1997/03/11 05:52:32 davem Exp $
+/* $Id: eexpress.c,v 1.1.1.1 1997/10/27 22:43:33 davem Exp $
  *
  * Intel EtherExpress device driver for Linux
  *

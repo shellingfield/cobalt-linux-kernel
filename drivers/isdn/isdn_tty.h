@@ -1,4 +1,4 @@
-/* $Id: isdn_tty.h,v 1.10 1997/03/02 14:29:26 fritz Exp $
+/* $Id: isdn_tty.h,v 1.2 1997/11/29 02:01:38 davem Exp $
 
  * header for Linux ISDN subsystem, tty related functions (linklevel).
  *
@@ -20,6 +20,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_tty.h,v $
+ * Revision 1.2  1997/11/29 02:01:38  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.10  1997/03/02 14:29:26  fritz
  * More ttyI related cleanup.
  *

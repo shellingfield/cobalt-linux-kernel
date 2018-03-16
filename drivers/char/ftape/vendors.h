@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/vendors.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/vendors.h,v $
+ $Author: davem $
  *
- $Revision: 1.34 $
- $Date: 1995/05/27 08:54:21 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:42 $
+ $State: Exp $
  *
  *      This file contains the supported drive types
  *      with their QIC-117 spec. vendor code and

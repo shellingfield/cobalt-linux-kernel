@@ -38,6 +38,11 @@
 #include "vt_kern.h"
 
 /*
+ * Don't initialize the keyboard when he use a serial console.
+ */
+extern int serial_console;
+
+/*
  * On non-x86 hardware we do a full keyboard controller
  * initialization, in case the bootup software hasn't done
  * it. On a x86, the BIOS will already have initialized the
@@ -1078,8 +1083,10 @@ static int send_data(unsigned char data)
 		reply_expected = 1;
 		outb_p(data, 0x60);
 		for(i=0; i<0x200000; i++) {
+#if defined(__SMP__) && defined(__i386__)
 			extern void allow_interrupts(void);
 			allow_interrupts();
+#endif
 			inb_p(0x64);		/* just as a delay */
 			if (acknowledge)
 				return 1;
@@ -1191,6 +1198,9 @@ int kbd_init(void)
 	int i;
 	struct kbd_struct kbd0;
 	extern struct tty_driver console_driver;
+
+	if (serial_console != 0)
+		return 0;
 
 	kbd0.ledflagstate = kbd0.default_ledflagstate = KBD_DEFLEDS;
 	kbd0.ledmode = LED_SHOW_FLAGS;

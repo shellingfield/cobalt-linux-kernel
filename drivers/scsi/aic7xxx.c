@@ -73,7 +73,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      $Id: aic7xxx.c,v 1.119 1997/06/27 19:39:18 gibbs Exp $
+ *      $Id: aic7xxx.c,v 1.6 1998/11/19 14:17:09 davem Exp $
  *---------------------------------------------------------------------------
  *
  *  Thanks also go to (in alphabetical order) the following:
@@ -93,7 +93,7 @@
  *
  *  Daniel M. Eischen, deischen@iworks.InterWorks.org, 1/23/97
  *
- *  $Id: aic7xxx.c,v 4.1 1997/06/12 08:23:42 deang Exp $
+ *  $Id: aic7xxx.c,v 1.6 1998/11/19 14:17:09 davem Exp $
  *-M*************************************************************************/
 
 /*+M**************************************************************************
@@ -167,6 +167,8 @@
 #include <linux/module.h>
 #endif
 
+#include <linux/config.h>        /* for CONFIG_PCI and CONFIG_COBALT_27 */
+
 #include <stdarg.h>
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -182,6 +184,10 @@
 #include <linux/blk.h>
 #include <linux/tqueue.h>
 #include <linux/tasks.h>
+#ifdef CONFIG_COBALT_27
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#endif /* CONFIG_COBALT_27 */
 #include "sd.h"
 #include "scsi.h"
 #include "hosts.h"
@@ -195,7 +201,10 @@
 #include <linux/stat.h>
 #include <linux/malloc.h>        /* for kmalloc() */
 
-#include <linux/config.h>        /* for CONFIG_PCI */
+#ifdef CONFIG_COBALT_27
+#define CACHED_TO_UNCACHED(x)         (((unsigned long)(x) & (unsigned long)0x1fffffff) + KSEG1)
+#define UNCACHED_TO_CACHED(x)         (((unsigned long)(x) & (unsigned long)0x1fffffff) + KSEG0)
+#endif /* CONFIG_COBALT_27 */
 
 /*
  * To generate the correct addresses for the controller to issue
@@ -264,6 +273,8 @@ struct proc_dir_entry proc_scsi_aic7xxx = {
 #  endif
 #  define mb() \
      __asm__ __volatile__("mb": : :"memory")
+#elif defined(__mips__)
+/* Our mb() as is is perfectly fine.  --DaveM */
 #endif
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,1,0)
@@ -933,7 +944,7 @@ struct aic7xxx_host {
    * the preceeding entries.
    */
 
-  volatile unsigned char   untagged_scbs[256];
+  volatile unsigned char   untagged_scbs[256]  __attribute__ ((aligned (32)));
   volatile unsigned char   qoutfifo[256];
   volatile unsigned char   qinfifo[256];
   unsigned int             irq;              /* IRQ for this adapter */
@@ -2015,7 +2026,12 @@ aic7xxx_rem_scb_from_disc_list(struct aic7xxx_host *p, unsigned char scbptr)
 static __inline void
 aic7xxx_busy_target(struct aic7xxx_host *p, struct aic7xxx_scb *scb)
 {
-  p->untagged_scbs[scb->hscb->target_channel_lun] = scb->hscb->tag;
+  volatile unsigned char *usp = &p->untagged_scbs[scb->hscb->target_channel_lun];
+#ifdef CONFIG_COBALT_27
+  /* COBALT LOCAL: Card looks at this, must access uncached.  */
+  usp = (volatile unsigned char *)CACHED_TO_UNCACHED(usp);
+#endif
+  *usp = scb->hscb->tag;
 }
 
 /*+F*************************************************************************
@@ -2030,12 +2046,17 @@ static __inline unsigned char
 aic7xxx_index_busy_target(struct aic7xxx_host *p, unsigned char tcl,
     int unbusy)
 {
+  volatile unsigned char *usp = &p->untagged_scbs[tcl];
   unsigned char busy_scbid;
 
-  busy_scbid = p->untagged_scbs[tcl];
+#ifdef CONFIG_COBALT_27
+  /* COBALT LOCAL: Card looks at this, must access uncached.  */
+  usp = (volatile unsigned char *)CACHED_TO_UNCACHED(usp);
+#endif
+  busy_scbid = *usp;
   if (unbusy)
   {
-    p->untagged_scbs[tcl] = SCB_LIST_NULL;
+    *usp = SCB_LIST_NULL;
   }
   return (busy_scbid);
 }
@@ -2132,6 +2153,10 @@ aic7xxx_allocate_scb(struct aic7xxx_host *p, int force_alloc)
             p->host_no, -1, -1, -1, scb_count);
       }
       memset(scb_ap, 0, scb_count * scb_size);
+#ifdef CONFIG_COBALT_27
+      flush_cache_pre_dma_out((ulong)scb_ap, scb_count * scb_size);
+      scb_ap = (struct aic7xxx_scb *)CACHED_TO_UNCACHED(scb_ap);
+#endif
       hsgp = (struct hw_scatterlist *) &scb_ap[scb_count];
       for (i=0; i < scb_count; i++)
       {
@@ -2530,6 +2555,7 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
     int lun, unsigned char tag, int flags, int requeue,
     volatile scb_queue_type *queue)
 {
+  volatile unsigned char *qip = &p->qinfifo[0];
   int      found;
   unsigned char qinpos, qintail;
   struct aic7xxx_scb *scbp;
@@ -2539,10 +2565,12 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
   qintail = p->qinfifonext;
 
   p->qinfifonext = qinpos;
-
+#ifdef CONFIG_COBALT_27
+  qip = (volatile unsigned char *)CACHED_TO_UNCACHED(qip);
+#endif
   while (qinpos != qintail)
   {
-    scbp = p->scb_data->scb_array[p->qinfifo[qinpos++]];
+    scbp = p->scb_data->scb_array[qip[qinpos++]];
     if (aic7xxx_match_scb(p, scbp, target, channel, lun, tag))
     {
        /*
@@ -2570,7 +2598,7 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
        }
        else if (requeue)
        {
-         p->qinfifo[p->qinfifonext++] = scbp->hscb->tag;
+         qip[p->qinfifonext++] = scbp->hscb->tag;
        }
        else
        {
@@ -2591,7 +2619,7 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
     }
     else
     {
-      p->qinfifo[p->qinfifonext++] = scbp->hscb->tag;
+      qip[p->qinfifonext++] = scbp->hscb->tag;
     }
   }
   /*
@@ -2604,7 +2632,7 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
   qinpos = p->qinfifonext;
   while(qinpos != qintail)
   {
-    p->qinfifo[qinpos++] = SCB_LIST_NULL;
+    qip[qinpos++] = SCB_LIST_NULL;
   }
   aic_outb(p, p->qinfifonext, KERNEL_QINPOS);
 
@@ -2621,11 +2649,15 @@ aic7xxx_search_qinfifo(struct aic7xxx_host *p, int target, int channel,
 static int
 aic7xxx_scb_on_qoutfifo(struct aic7xxx_host *p, struct aic7xxx_scb *scb)
 {
+  volatile unsigned char *qop = &p->qoutfifo[0];
   int i=0;
 
-  while(p->qoutfifo[(p->qoutfifonext + i) & 0xff ] != SCB_LIST_NULL)
+#ifdef CONFIG_COBALT_27
+  qop = (volatile unsigned char *)CACHED_TO_UNCACHED(qop);
+#endif
+  while(qop[(p->qoutfifonext + i) & 0xff ] != SCB_LIST_NULL)
   {
-    if(p->qoutfifo[(p->qoutfifonext + i) & 0xff ] == scb->hscb->tag)
+    if(qop[(p->qoutfifonext + i) & 0xff ] == scb->hscb->tag)
       return TRUE;
     else
       i++;
@@ -3288,6 +3320,8 @@ aic7xxx_run_waiting_queues(struct aic7xxx_host *p)
     }
     else
     {
+        volatile unsigned char *qip = &p->qinfifo[0];
+
         scb->flags &= ~SCB_WAITINGQ;
         p->dev_active_cmds[tindex]++;
         p->activescbs++;
@@ -3295,7 +3329,10 @@ aic7xxx_run_waiting_queues(struct aic7xxx_host *p)
         {
           aic7xxx_busy_target(p, scb);
         }
-        p->qinfifo[p->qinfifonext++] = scb->hscb->tag;
+#ifdef CONFIG_COBALT_27
+        qip = (volatile unsigned char *)CACHED_TO_UNCACHED(qip);
+#endif
+        qip[p->qinfifonext++] = scb->hscb->tag;
         sent++;
     }
   }
@@ -4964,7 +5001,7 @@ aic7xxx_pci_intr(struct aic7xxx_host *p)
 
   error = 0;
   error = pcibios_read_config_byte(p->pci_bus, p->pci_device_fn,
-                                            PCI_STATUS, &status1);
+                                   PCI_STATUS, &status1);
 
   if (error == 0)
   {
@@ -4996,7 +5033,7 @@ aic7xxx_pci_intr(struct aic7xxx_host *p)
   }
   
   pcibios_write_config_byte(p->pci_bus, p->pci_device_fn,
-                                            PCI_STATUS, status1);
+                            PCI_STATUS, status1);
   if (status1 & (DPR|RMA|RTA))
     aic_outb(p,  CLRPARERR, CLRINT);
 
@@ -5070,6 +5107,7 @@ aic7xxx_isr(int irq, void *dev_id, struct pt_regs *regs)
    */
   if (intstat & CMDCMPLT)
   {
+    volatile unsigned char *qop = &p->qoutfifo[0];
     struct aic7xxx_scb *scb = NULL;
     Scsi_Cmnd *cmd;
     unsigned char scb_index;
@@ -5090,11 +5128,13 @@ aic7xxx_isr(int irq, void *dev_id, struct pt_regs *regs)
      * issues this interrupt. There may be >1 commands
      * finished, so loop until we've processed them all.
      */
-
-    while (p->qoutfifo[p->qoutfifonext] != SCB_LIST_NULL)
+#ifdef CONFIG_COBALT_27
+    qop = (volatile unsigned char *)CACHED_TO_UNCACHED(qop);
+#endif
+    while (qop[p->qoutfifonext] != SCB_LIST_NULL)
     {
-      scb_index = p->qoutfifo[p->qoutfifonext];
-      p->qoutfifo[p->qoutfifonext++] = SCB_LIST_NULL;
+      scb_index = qop[p->qoutfifonext];
+      qop[p->qoutfifonext++] = SCB_LIST_NULL;
       if ( scb_index >= p->scb_data->numscbs )
         scb = NULL;
       else
@@ -6200,6 +6240,12 @@ aic7xxx_register(Scsi_Host_Template *template, struct aic7xxx_host *p,
     p->qinfifo[i] = SCB_LIST_NULL;
     p->qoutfifo[i] = SCB_LIST_NULL;
   }
+#ifdef CONFIG_COBALT_27
+  /* COBALT LOCAL: Flush untagged_scbs and qfifos to ram,
+   * from here on out we access them uncached.  --DaveM
+   */
+  flush_cache_pre_dma_out((ulong) &p->untagged_scbs[0], 256 + 256 + 256);
+#endif
   /*
    * We currently have no commands of any type
    */
@@ -6293,10 +6339,18 @@ aic7xxx_register(Scsi_Host_Template *template, struct aic7xxx_host *p,
    */
   if ((p->type & AHC_AIC7770) == AHC_AIC7770)
   {
+#ifdef CONFIG_COBALT_27
+    result = (request_irq(p->irq, do_aic7xxx_isr, SA_INTERRUPT, "aic7xxx", p));
+#else
     result = (request_irq(p->irq, do_aic7xxx_isr, 0, "aic7xxx", p));
+#endif
   }
   else
   {
+#ifdef CONFIG_COBALT_27
+    result = (request_irq(p->irq, do_aic7xxx_isr, SA_INTERRUPT,
+                          "aic7xxx", p));
+#else
     result = (request_irq(p->irq, do_aic7xxx_isr, SA_SHIRQ,
               "aic7xxx", p));
     if (result < 0)
@@ -6304,6 +6358,7 @@ aic7xxx_register(Scsi_Host_Template *template, struct aic7xxx_host *p,
       result = (request_irq(p->irq, do_aic7xxx_isr, SA_INTERRUPT | SA_SHIRQ,
               "aic7xxx", p));
     }
+#endif
   }
   if (result < 0)
   {
@@ -6543,6 +6598,10 @@ aic7xxx_register(Scsi_Host_Template *template, struct aic7xxx_host *p,
     }
     /* At least the control byte of each SCB needs to be 0. */
     memset(p->scb_data->hscbs, 0, array_size);
+#ifdef CONFIG_COBALT_27
+    flush_cache_pre_dma_out((ulong)p->scb_data->hscbs, array_size);
+    p->scb_data->hscbs = (struct aic7xxx_hwscb *)CACHED_TO_UNCACHED(p->scb_data->hscbs);
+#endif
 
     /* Tell the sequencer where it can find the hardware SCB array. */
     hscb_physaddr = VIRT_TO_BUS(p->scb_data->hscbs);
@@ -6696,6 +6755,11 @@ aic7xxx_alloc(Scsi_Host_Template *sht, struct aic7xxx_host *temp)
     if (p->scb_data != NULL)
     {
       memset(p->scb_data, 0, sizeof(scb_data_type));
+#ifdef CONFIG_COBALT_27
+      flush_cache_pre_dma_out((ulong)p->scb_data,
+                              sizeof(scb_data_type));
+      p->scb_data = (scb_data_type *)CACHED_TO_UNCACHED(p->scb_data);
+#endif
       scbq_init (&p->scb_data->free_scbs);
     }
     else
@@ -6754,7 +6818,7 @@ aic7xxx_free(struct aic7xxx_host *p)
    */
   if (p->scb_data->hscbs != NULL)
   {
-    kfree(p->scb_data->hscbs);
+    kfree((void *)UNCACHED_TO_CACHED(p->scb_data->hscbs));
   }
   /*
    * Free the driver SCBs.  These were allocated on an as-need
@@ -6768,12 +6832,12 @@ aic7xxx_free(struct aic7xxx_host *p)
   jump = (sizeof(int) == sizeof(void *)) ? 30 : 29;
   for (i = 0; i < p->scb_data->numscbs; i += jump)
   {
-    kfree(p->scb_data->scb_array[i]);
+    kfree((void *)UNCACHED_TO_CACHED(p->scb_data->scb_array[i]));
   }
   /*
    * Free the SCB data area.
    */
-  kfree(p->scb_data);
+  kfree((void *)UNCACHED_TO_CACHED(p->scb_data));
 
   /*
    * Free the instance of the device structure.
@@ -7051,8 +7115,10 @@ aic7xxx_detect(Scsi_Host_Template *template)
   struct aic7xxx_host *current_p = NULL;
   struct aic7xxx_host *list_p = NULL;
   int found = 0;
+#if defined(__i386__) || defined(__alpha__)
   ahc_flag_type flags = 0;
   ahc_type type;
+#endif
   unsigned char sxfrctl1;
 #if defined(__i386__) || defined(__alpha__)
   unsigned char hcntrl, hostconf;
@@ -8066,6 +8132,13 @@ aic7xxx_buildscb(struct aic7xxx_host *p, Scsi_Cmnd *cmd,
    */
   hscb->SCSI_cmd_length = cmd->cmd_len;
   hscb->SCSI_cmd_pointer = cpu_to_le32(VIRT_TO_BUS(cmd->cmnd));
+#ifdef CONFIG_COBALT_27
+  /* COBALT LOCAL: The card reads the scsi cmd from memory, push
+   * it out of the cache.
+   */
+  flush_cache_pre_dma_out((ulong)&cmd->cmnd[0],
+                          sizeof(cmd->cmnd));
+#endif
 
   if (cmd->use_sg)
   {
@@ -8086,6 +8159,14 @@ aic7xxx_buildscb(struct aic7xxx_host *p, Scsi_Cmnd *cmd,
       scb->sg_list[i].address = cpu_to_le32(VIRT_TO_BUS(sg[i].address));
       scb->sg_list[i].length = cpu_to_le32(sg[i].length);
       scb->sg_length += sg[i].length;
+#ifdef CONFIG_COBALT_27
+      /* COBALT LOCAL: Push scsi buffer out to main memory.
+       * One possible optimization is to use different flushes
+       * based upon the scsi data transfer direction like we do
+       * in the network drivers.
+       */
+      flush_cache_pre_dma_out((ulong)sg[i].address, sg[i].length);
+#endif
     }
     hscb->SG_list_pointer = cpu_to_le32(VIRT_TO_BUS(scb->sg_list));
     hscb->SG_segment_count = cmd->use_sg;
@@ -8103,6 +8184,15 @@ aic7xxx_buildscb(struct aic7xxx_host *p, Scsi_Cmnd *cmd,
       scb->sg_list[0].address = cpu_to_le32(VIRT_TO_BUS(cmd->request_buffer));
       scb->sg_list[0].length = cpu_to_le32(cmd->request_bufflen);
       scb->sg_length = cmd->request_bufflen;
+#ifdef CONFIG_COBALT_27
+      /* COBALT LOCAL: Push scsi buffer out to main memory.
+       * One possible optimization is to use different flushes
+       * based upon the scsi data transfer direction like we do
+       * in the network drivers.
+       */
+      flush_cache_pre_dma_out((ulong)cmd->request_buffer,
+                              cmd->request_bufflen);
+#endif
       hscb->SG_segment_count = 1;
       hscb->SG_list_pointer = cpu_to_le32(VIRT_TO_BUS(&scb->sg_list[0]));
       hscb->data_count = scb->sg_list[0].length;
@@ -8195,6 +8285,10 @@ aic7xxx_queue(Scsi_Cmnd *cmd, void (*fn)(Scsi_Cmnd *))
     cmd->result = 0;
     cmd->host_scribble = NULL;
     memset(&cmd->sense_buffer, 0, sizeof(cmd->sense_buffer));
+#ifdef CONFIG_COBALT_27
+    flush_cache_pre_dma_out((ulong)&cmd->sense_buffer[0],
+                            sizeof(cmd->sense_buffer));
+#endif
 
     scb->flags |= SCB_ACTIVE | SCB_WAITINGQ;
 
@@ -8360,6 +8454,8 @@ aic7xxx_bus_device_reset(struct aic7xxx_host *p, Scsi_Cmnd *cmd)
   }
   if (disconnected)
   {
+    volatile unsigned char *qip = &p->qinfifo[0];
+
         /*
          * Simply set the MK_MESSAGE flag and the SEQINT handler will do
          * the rest on a reconnect.
@@ -8393,7 +8489,10 @@ aic7xxx_bus_device_reset(struct aic7xxx_host *p, Scsi_Cmnd *cmd)
     if (aic7xxx_verbose & VERBOSE_RESET_PROCESS)
       printk(INFO_LEAD "Queueing device reset "
            "command.\n", p->host_no, CTL_OF_SCB(scb));
-    p->qinfifo[p->qinfifonext++] = scb->hscb->tag;
+#ifdef CONFIG_COBALT_27
+    qip = (volatile unsigned char *)CACHED_TO_UNCACHED(qip);
+#endif
+    qip[p->qinfifonext++] = scb->hscb->tag;
     aic_outb(p, p->qinfifonext, KERNEL_QINPOS);
     scb->flags |= SCB_QUEUED_ABORT;
     result = SCSI_RESET_PENDING;
@@ -8718,6 +8817,8 @@ aic7xxx_abort(Scsi_Cmnd *cmd)
 
   if ( found == 0 )
   {
+    volatile unsigned char *qip = &p->qinfifo[0];
+
     p->flags |= AHC_ABORT_PENDING;
     scb->flags |= SCB_QUEUED_ABORT | SCB_ABORT | SCB_RECOVERY_SCB;
     scb->hscb->control |= MK_MESSAGE;
@@ -8733,7 +8834,10 @@ aic7xxx_abort(Scsi_Cmnd *cmd)
     if (aic7xxx_verbose & VERBOSE_ABORT_PROCESS)
       printk(INFO_LEAD "SCB disconnected.  Queueing Abort"
         " SCB.\n", p->host_no, CTL_OF_SCB(scb));
-    p->qinfifo[p->qinfifonext++] = scb->hscb->tag;
+#ifdef CONFIG_COBALT_27
+    qip = (volatile unsigned char *)CACHED_TO_UNCACHED(qip);
+#endif
+    qip[p->qinfifonext++] = scb->hscb->tag;
     aic_outb(p, p->qinfifonext, KERNEL_QINPOS);
   }
   if (found)

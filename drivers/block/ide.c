@@ -25,8 +25,8 @@
  *	Define some new major numbers (in major.h), and insert them into
  *	the ide_hwif_to_major table in ide.c.
  *
- *	Fill in the extra values for the new interfaces into the two tables
- *	inside ide.c:  default_io_base[]  and  default_irqs[].
+ *	Fill in the extra values for the new interfaces into the two functions
+ *	inside <asm/ide.h>:  ide_default_io_base() and ide_default_irq().
  *
  *	Create the new request handlers by cloning "do_ide3_request()"
  *	for each new interface, and add them to the switch statement
@@ -318,9 +318,19 @@
 #define IS_PROMISE_DRIVE (0)	/* auto-NULLs out Promise code */
 #endif /* CONFIG_BLK_DEV_PROMISE */
 
+#if MAX_HWIFS == 1
+static const byte	ide_hwif_to_major[MAX_HWIFS] = {IDE0_MAJOR };
+#else
+#if MAX_HWIFS == 2
+static const byte	ide_hwif_to_major[MAX_HWIFS] = {IDE0_MAJOR, IDE1_MAJOR };
+#else
+#if MAX_HWIFS == 3
+static const byte	ide_hwif_to_major[MAX_HWIFS] = {IDE0_MAJOR, IDE1_MAJOR, IDE2_MAJOR };
+#else
 static const byte	ide_hwif_to_major[MAX_HWIFS] = {IDE0_MAJOR, IDE1_MAJOR, IDE2_MAJOR, IDE3_MAJOR};
-static const unsigned short default_io_base[MAX_HWIFS] = {0x1f0, 0x170, 0x1e8, 0x168};
-static const byte	default_irqs[MAX_HWIFS]     = {14, 15, 11, 10};
+#endif
+#endif
+#endif
 static int	idebus_parameter; /* holds the "idebus=" parameter */
 static int	system_bus_speed; /* holds what we think is VESA/PCI bus speed */
 
@@ -379,7 +389,7 @@ static void init_hwif_data (unsigned int index)
 
 	/* fill in any non-zero initial values */
 	hwif->index     = index;
-	hwif->io_base	= default_io_base[index];
+	hwif->io_base	= ide_default_io_base(index);
 	hwif->ctl_port	= hwif->io_base ? hwif->io_base+0x206 : 0x000;
 #ifdef CONFIG_BLK_DEV_HD
 	if (hwif->io_base == HD_DATA)
@@ -471,7 +481,7 @@ int ide_system_bus_speed (void)
  * of the sector count register location, with interrupts disabled
  * to ensure that the reads all happen together.
  */
-static inline void do_vlb_sync (unsigned short port) {
+static inline void do_vlb_sync (ide_ioreg_t port) {
 	(void) inb (port);
 	(void) inb (port);
 	(void) inb (port);
@@ -483,8 +493,8 @@ static inline void do_vlb_sync (unsigned short port) {
  */
 void ide_input_data (ide_drive_t *drive, void *buffer, unsigned int wcount)
 {
-	unsigned short io_base  = HWIF(drive)->io_base;
-	unsigned short data_reg = io_base+IDE_DATA_OFFSET;
+	ide_ioreg_t io_base  = HWIF(drive)->io_base;
+	ide_ioreg_t data_reg = io_base+IDE_DATA_OFFSET;
 	byte io_32bit = drive->io_32bit;
 
 	if (io_32bit) {
@@ -517,8 +527,8 @@ void ide_input_data (ide_drive_t *drive, void *buffer, unsigned int wcount)
  */
 void ide_output_data (ide_drive_t *drive, void *buffer, unsigned int wcount)
 {
-	unsigned short io_base  = HWIF(drive)->io_base;
-	unsigned short data_reg = io_base+IDE_DATA_OFFSET;
+	ide_ioreg_t io_base  = HWIF(drive)->io_base;
+	ide_ioreg_t data_reg = io_base+IDE_DATA_OFFSET;
 	byte io_32bit = drive->io_32bit;
 
 	if (io_32bit) {
@@ -1425,7 +1435,7 @@ int ide_wait_stat (ide_drive_t *drive, byte good, byte bad, unsigned long timeou
 static inline void do_rw_disk (ide_drive_t *drive, struct request *rq, unsigned long block)
 {
 	ide_hwif_t *hwif = HWIF(drive);
-	unsigned short io_base = hwif->io_base;
+	ide_ioreg_t io_base = hwif->io_base;
 #ifdef CONFIG_BLK_DEV_PROMISE
 	int use_promise_io = 0;
 #endif /* CONFIG_BLK_DEV_PROMISE */
@@ -1474,19 +1484,19 @@ static inline void do_rw_disk (ide_drive_t *drive, struct request *rq, unsigned 
 	}
 #endif /* CONFIG_BLK_DEV_PROMISE */
 	if (rq->cmd == READ) {
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 		if (drive->using_dma && !(HWIF(drive)->dmaproc(ide_dma_read, drive)))
 			return;
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 		ide_set_handler(drive, &read_intr, WAIT_CMD);
 		OUT_BYTE(drive->mult_count ? WIN_MULTREAD : WIN_READ, io_base+IDE_COMMAND_OFFSET);
 		return;
 	}
 	if (rq->cmd == WRITE) {
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 		if (drive->using_dma && !(HWIF(drive)->dmaproc(ide_dma_write, drive)))
 			return;
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 		OUT_BYTE(drive->mult_count ? WIN_MULTWRITE : WIN_WRITE, io_base+IDE_COMMAND_OFFSET);
 		if (ide_wait_stat(drive, DATA_READY, drive->bad_wstat, WAIT_DRQ)) {
 			printk("%s: no DRQ after issuing %s\n", drive->name,
@@ -2482,9 +2492,14 @@ static inline void do_identify (ide_drive_t *drive, byte cmd)
 					drive->media = ide_tape;
 					drive->present = 1;
 					drive->removable = 1;
+					cli(); /* XXX */
 					if (drive->autotune != 2 && HWIF(drive)->dmaproc != NULL) {
-						if (!HWIF(drive)->dmaproc(ide_dma_check, drive))
-							printk(", DMA");
+						if (!HWIF(drive)->dmaproc(ide_dma_check, drive)) {
+							if((drive->id->udma_modes & 0x4) != 0x0)
+								printk(", UDMA");
+							else
+								printk(", DMA");
+						}
 					}
 					printk("\n");
 				}
@@ -2599,8 +2614,9 @@ static inline void do_identify (ide_drive_t *drive, byte cmd)
 			drive->special.b.set_multmode = 1;
 	}
 	if (drive->autotune != 2 && HWIF(drive)->dmaproc != NULL) {
+		cli(); /* XXX */
 		if (!(HWIF(drive)->dmaproc(ide_dma_check, drive))) {
-			if ((id->field_valid & 4) && (id->dma_ultra & (id->dma_ultra >> 8) & 7))
+			if((drive->id->udma_modes & 0x04) != 0x0)
 				printk(", UDMA");
 			else
 				printk(", DMA");
@@ -2694,7 +2710,9 @@ static int try_to_identify (ide_drive_t *drive, byte cmd)
 			(void) GET_STAT();	/* clear drive IRQ */
 
 		} else {	/* Mmmm.. multiple IRQs.. don't know which was ours */
+#if 0 /* COBALT local change, we don't need to see this in the logs... */
 			printk("%s: IRQ probe failed (%d)\n", drive->name, irq_off);
+#endif
 #ifdef CONFIG_BLK_DEV_CMD640
 #ifdef CMD640_DUMP_REGS
 			if (HWIF(drive)->chipset == ide_cmd640) {
@@ -3431,6 +3449,8 @@ static int init_irq (ide_hwif_t *hwif)
 		hwgroup = match->hwgroup;
 	} else {
 		hwgroup = kmalloc(sizeof(ide_hwgroup_t), GFP_KERNEL);
+		if (!hwgroup)
+			return 0;
 		hwgroup->hwif 	 = hwgroup->next_hwif = hwif->next = hwif;
 		hwgroup->rq      = NULL;
 		hwgroup->handler = NULL;
@@ -3466,7 +3486,7 @@ static int init_irq (ide_hwif_t *hwif)
 
 	restore_flags(flags);	/* safe now that hwif->hwgroup is set up */
 
-	printk("%s at 0x%03x-0x%03x,0x%03x on irq %d", hwif->name,
+	printk("%s at 0x%03lx-0x%03lx,0x%03lx on irq %d", hwif->name,
 		hwif->io_base, hwif->io_base+7, hwif->ctl_port, hwif->irq);
 	if (match)
 		printk(" (%sed with %s)", hwif->sharing_irq ? "shar" : "serializ", match->name);
@@ -3534,7 +3554,7 @@ static void probe_for_hwifs (void)
 		ide_probe_pci (PCI_VENDOR_ID_PCTECH, PCI_DEVICE_ID_PCTECH_RZ1000, &init_rz1000, 0);
 		ide_probe_pci (PCI_VENDOR_ID_PCTECH, PCI_DEVICE_ID_PCTECH_RZ1001, &init_rz1000, 0);
 #endif /* CONFIG_BLK_DEV_RZ1000 */
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON)
 		/*
 		 * Apparently the BIOS32 services on Intel motherboards are
 		 * buggy and won't find the PCI_DEVICE_ID_INTEL_82371_1 for us.
@@ -3556,6 +3576,9 @@ static void probe_for_hwifs (void)
 #ifdef CONFIG_BLK_DEV_PROMISE
 	init_dc4030();
 #endif
+#ifdef CONFIG_BLK_DEV_COBALT
+	ide_init_cobalt();
+#endif
 }
 
 static int hwif_init (int h)
@@ -3566,7 +3589,7 @@ static int hwif_init (int h)
 	if (!hwif->present)
 		return 0;
 	if (!hwif->irq) {
-		if (!(hwif->irq = default_irqs[h])) {
+		if (!(hwif->irq = ide_default_irq(h))) {
 			printk("%s: DISABLED, NO IRQ\n", hwif->name);
 			return (hwif->present = 0);
 		}
@@ -3637,7 +3660,7 @@ int ide_init (void)
 }
 
 #ifdef CONFIG_BLK_DEV_IDE_PCMCIA
-int ide_register(int io_base, int ctl_port, int irq)
+int ide_register(ide_ioreg_t io_base, ide_ioreg_t ctl_port, int irq)
 {
 	int index, i, rc = -1;
 	ide_hwif_t *hwif;

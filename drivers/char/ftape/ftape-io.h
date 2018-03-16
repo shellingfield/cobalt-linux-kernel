@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/ftape-io.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/ftape-io.h,v $
+ $Author: davem $
  *
- $Revision: 1.36 $
- $Date: 1995/05/06 16:11:53 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:42 $
+ $State: Exp $
  *
  *      This file contains definitions for the glue part
  *      of the QIC-40/80 floppy-tape driver for Linux.

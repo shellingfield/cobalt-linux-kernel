@@ -9,6 +9,7 @@
 #define ATARIMOUSE_MINOR 5
 #define SUN_MOUSE_MINOR 6
 #define MISC_DYNAMIC_MINOR 255
+#define LCD_MINOR 140
 
 extern int misc_init(void);
 

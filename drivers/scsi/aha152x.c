@@ -20,9 +20,12 @@
  * General Public License for more details.
  *
  *
- * $Id: aha152x.c,v 1.18 1996/09/07 20:10:40 fischer Exp $
+ * $Id: aha152x.c,v 1.1.1.1 1997/10/27 22:43:44 davem Exp $
  *
  * $Log: aha152x.c,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  * Revision 1.18  1996/09/07 20:10:40  fischer
  * - fixed can_queue handling (multiple outstanding commands working again)
  *

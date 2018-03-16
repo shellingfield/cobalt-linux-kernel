@@ -31,6 +31,12 @@
 
 /*
  * $Log: NCR5380.c,v $
+ * Revision 1.2  1998/06/13 10:59:43  davem
+ * Merge to 2.0.34
+ *
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  * Revision 1.7  1996/3/2	Ray Van Tassle (rayvt@comm.mot.com)
  * added proc_info
  * added support needed for DTC 3180/3280

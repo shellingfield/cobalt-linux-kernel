@@ -1,11 +1,14 @@
 /*
- * $Id: b1pci.c,v 1.2 1997/05/18 09:24:13 calle Exp $
+ * $Id: b1pci.c,v 1.1 1997/11/29 02:01:32 davem Exp $
  * 
  * Module for AVM B1 PCI-card.
  * 
  * (c) Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: b1pci.c,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.2  1997/05/18 09:24:13  calle
  * added verbose disconnect reason reporting to avmb1.
  * some fixes in capi20 interface.
@@ -34,7 +37,7 @@
 #define PCI_DEVICE_ID_AVM_B1	0x700
 #endif
 
-static char *revision = "$Revision: 1.2 $";
+static char *revision = "$Revision: 1.1 $";
 
 /* ------------------------------------------------------------- */
 

@@ -1,5 +1,5 @@
 /*
- *  $Id: shmem.c,v 1.2 1996/11/20 17:49:56 fritz Exp $
+ *  $Id: shmem.c,v 1.1 1997/11/29 02:01:31 davem Exp $
  *  Copyright (C) 1996  SpellCaster Telecommunications Inc.
  *
  *  card.c - Card functions implementing ISDN4Linux functionality

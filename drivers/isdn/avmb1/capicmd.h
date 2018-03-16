@@ -1,11 +1,14 @@
 /*
- * $Id: capicmd.h,v 1.1 1997/03/04 21:50:30 calle Exp $
+ * $Id: capicmd.h,v 1.1 1997/11/29 02:01:32 davem Exp $
  * 
  * CAPI 2.0 Interface for Linux
  * 
  * Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: capicmd.h,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1997/03/04 21:50:30  calle
  * Frirst version in isdn4linux
  *

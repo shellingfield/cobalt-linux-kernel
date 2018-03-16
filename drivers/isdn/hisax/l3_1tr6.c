@@ -1,4 +1,4 @@
-/* $Id: l3_1tr6.c,v 1.11 1997/04/06 22:54:18 keil Exp $
+/* $Id: l3_1tr6.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  *  German 1TR6 D-channel protocol
  *
@@ -6,6 +6,9 @@
  *
  *
  * $Log: l3_1tr6.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.11  1997/04/06 22:54:18  keil
  * Using SKB's
  *
@@ -49,7 +52,7 @@
 #include <linux/ctype.h>
 
 extern char *HiSax_getrev(const char *revision);
-const char *l3_1tr6_revision = "$Revision: 1.11 $";
+const char *l3_1tr6_revision = "$Revision: 1.1 $";
 
 #define MsgHead(ptr, cref, mty, dis) \
 	*ptr++ = dis; \

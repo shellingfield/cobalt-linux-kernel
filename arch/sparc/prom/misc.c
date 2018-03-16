@@ -1,4 +1,4 @@
-/* $Id: misc.c,v 1.8 1996/04/17 23:03:23 davem Exp $
+/* $Id: misc.c,v 1.1.1.1 1997/10/27 22:44:04 davem Exp $
  * misc.c:  Miscellaneous prom functions that don't belong
  *          anywhere else.
  *

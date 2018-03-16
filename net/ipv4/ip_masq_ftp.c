@@ -52,7 +52,7 @@
  * List of ports (up to MAX_MASQ_APP_PORTS) to be handled by helper
  * First port is set to the default port.
  */
-int ports[MAX_MASQ_APP_PORTS] = {21}; /* I rely on the trailing items being set to zero */
+static int ports[MAX_MASQ_APP_PORTS] = {21}; /* I rely on the trailing items being set to zero */
 struct ip_masq_app *masq_incarnations[MAX_MASQ_APP_PORTS];
 
 static int

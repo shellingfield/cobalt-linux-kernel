@@ -1,5 +1,5 @@
 /*
- * $Id: capiutil.h,v 1.2 1997/05/18 09:24:19 calle Exp $
+ * $Id: capiutil.h,v 1.1 1997/11/29 02:01:33 davem Exp $
  * 
  * CAPI 2.0 defines & types
  * 
@@ -7,6 +7,9 @@
  * Rewritten for Linux 1996 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: capiutil.h,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.2  1997/05/18 09:24:19  calle
  * added verbose disconnect reason reporting to avmb1.
  * some fixes in capi20 interface.

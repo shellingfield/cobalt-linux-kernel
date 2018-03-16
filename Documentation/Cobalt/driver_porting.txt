@@ -1,0 +1,164 @@
+		Porting PCI device drivers to the Cobalt Qube
+		  David S. Miller (davem@dm.cobaltmicro.com)
+
+	Making an existing Linux PCI device driver work on the Cobalt
+Qube is really not an arduous task at all, especially if you walk into
+doing it with the correct pieces of information.  This document is
+meant to provide you with that knowledge.
+
+First steps:
+
+1) Make sure the driver includes <linux/config.h>, if it does not
+   already, then add it:
+
+#include <linux/config.h>     /* for CONFIG_COBALT_27 */
+
+2) Add the following include directives and defines:
+
+#ifdef CONFIG_COBALT_27
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#endif
+
+#ifdef CONFIG_COBALT_27
+/* COBALT LOCAL: Needed because our mips is not DMA coherent. -DaveM */
+#define CACHED_TO_UNCACHED(x)         (((unsigned long)(x) & (unsigned long)0x1fffffff) + KSEG1)
+#endif
+
+
+As a general rule, it is a really good idea if you surround your "Qube
+porting" specific changes with instructive commentary.  This way, as
+you walk through the porting changes you made for a driver, you have
+documented the purpose of each change.
+
+Next, device probing:
+
+1) If there are code sections in the probing functions for your driver
+   which look for ISA, EISA etc. versions of the device, comment these
+   pieces of code out with "#ifndef CONFIG_COBALT_27".
+
+   These pieces of code poke around "ISA space" with I/O accesses to
+   find the devices if present.  This simply won't work on the MIPS
+   Cobalt machine because it has no ISA space.  The kernel will crash
+   in your device driver if you leave such code enabled.
+
+2) Some _extremely_ non-portable PCI drivers (they are rare luckily)
+   like to perform the PCI probing sequence using Ix86 instructions
+   or direct I/O accesses.  This won't work at all on the MIPS (or
+   any other non-Intel architecture for that matter).
+
+   Fortunately, this is easy to fix when it does happen.  A whole
+   library of portable PCI access functions are provided for device
+   drivers, remove the unportable x86 assembly and use these functions
+   instead, this is what they exist for.  See <linux/bios32.h> for
+   this portable PCI interface which is what all drivers should
+   be using.
+
+3) C languages types for "io ports".
+
+   Many drivers use types such as "unsigned short" to record and keep
+   track of the I/O ports in use by a device.  This is yet another
+   Intel specific non-portable practice.
+
+   But the fix is simple, change all such instances to use
+   "unsigned int" for I/O port values.
+
+4) Registering IRQ's
+
+   SA_SHIRQ is not supported on the Cobalt qube, there is only one
+   PCI slot and the functionality is therefore never needed.  Change
+   calls to request_irq() to use SA_INTERRUPT instead.
+
+
+If you've gotten this far, congratulations, you're almost done making
+your driver work on the Qube.
+
+Handling DMA:
+
+Devices which perform DMA need a little bit more shaping up before
+they'll work on the Qube.  If your device does not do any DMA, skip
+this section as you need not concern yourself about it.
+
+The problem is that on the MIPS, there is no coherency between CPU
+caches and devices performed in hardware.  Therefore, if you don't
+perform the necessary steps in software to make things coherent, your
+device will see inconsistant data when it performs DMA.
+
+It sounds ugly, but taking care of the situation is very easy.
+Just follow these very simple rules and things will work just fine.
+
+1) If you have a data structure used for communication between the
+   device driver and the device, such as a network device ring buffer
+   or a SCSI device mailbox queue, you need to access it non-cacheable
+   from the CPU.
+
+   The CACHED_TO_UNCACHED() macro is there to help you with this.
+   Let's say for example, you have just probed your device and are
+   allocating this ring buffer which your driver uses to communicate
+   with the adapter.  You would do something like this following:
+
+my_device->ring_buffer = my_ring_buffer_alloc( ... );
+#ifdef CONFIG_COBALT_27
+flush_cache_pre_dma_out((unsigned long)my_device->ring_buffer,
+		        sizeof(struct my_ring_buffer));
+my_device->ring_buffer = (void *)CACHED_TO_UNCACHED(my_device->ring_buffer);
+#endif
+
+   The flush cache operation make sure that this data structure is no
+   longer in the CPU's local caches, and makes sure that main memory
+   is consistant.
+
+   Now, when accessing the ring buffer, you will use the properly
+   placed and non-cachable address of it via my_device->ring_buffer,
+   and it will be guarenteed that the device and the CPU see
+   the correct data.
+
+2) When transferring other buffers to/from the device, explicit
+   flushing needs to occur.  This is very easy to do.
+
+   There are two such operations.  The first is where the device is
+   reading main memory via DMA, and second is where the device is
+   writing data to main memory via DMA.
+
+   DEVICE READS FROM MAIN MEMORY:
+
+      Right before the device is told to DMA the buffer, perform
+      the following operation:
+
+#ifdef CONFIG_COBALT_27
+		/* COBALT LOCAL: Kick it out of the caches so the device
+		 *               can see it.
+		 */
+		flush_cache_pre_dma_out((unsigned long)buffer, buffer_length);
+#endif
+
+   DEVICE WRITES TO MAIN MEMORY:
+
+      Right after a device has performed this type of DMA operation,
+      perform the following _before_ this buffer is inspected in
+      any way by the driver or some other part of the kernel:
+
+#ifdef CONFIG_COBALT_27
+		/* COBALT LOCAL: Kick out any matching lines in the cache so
+		 *               we see what the card wrote to memory.
+		 */
+		flush_cache_post_dma_in((unsigned long)buffer, buffer_len);
+#endif
+
+That's it, it's relatively simple to make your driver work on the
+Cobalt Qube, especially if you are familiar with the driver already.
+It's also not that much more difficult to port a driver you don't know
+very well.  I have found that I can walk blind into an arbitrary
+driver and have it ported in about one hours time, depending upon the
+complexity and size of the driver in question.
+
+One more word of advice.  The best way to understand all this
+information more clearly is to look at an example of other drivers
+which have had this porting work done to them already.  For this
+purpose I recommend taking a look at drivers/net/cobalt3com.c in the
+Cobalt kernel source tree which is a port of the 3c59x.c
+Vortex/Boomerang networking driver.  All changes are easily
+identifyable just by searching for instances of "CONFIG_COBALT_27" in
+the code.
+
+Good luck.

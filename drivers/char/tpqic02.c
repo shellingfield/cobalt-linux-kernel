@@ -1,4 +1,4 @@
-/* $Id: tpqic02.c,v 0.4.1.5 1994/10/29 02:46:13 root Exp root $
+/* $Id: tpqic02.c,v 1.1.1.1 1997/10/27 22:43:39 davem Exp $
  *
  * Driver for tape drive support for Linux-i386 1.1.58
  *
@@ -34,6 +34,9 @@
  * You are not allowed to change this line nor the text above.
  *
  * $Log: tpqic02.c,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:39  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  * Revision 0.4.1.5  1994/10/29  02:46:13  root
  * Minor cleanups.
  *
@@ -259,8 +262,8 @@ static volatile struct mtget ioctl_status;	/* current generic status */
 
 static volatile struct tpstatus tperror;	/* last drive status */
 
-static char rcs_revision[] = "$Revision: 0.4.1.5 $";
-static char rcs_date[] = "$Date: 1994/10/29 02:46:13 $";
+static char rcs_revision[] = "$Revision: 1.1.1.1 $";
+static char rcs_date[] = "$Date: 1997/10/27 22:43:39 $";
 
 /* Flag bits for status and outstanding requests.
  * (Could all be put in one bit-field-struct.)

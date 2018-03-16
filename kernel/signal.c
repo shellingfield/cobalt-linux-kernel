@@ -119,7 +119,7 @@ static inline void check_pending(int signum)
 	}	
 }
 
-#ifndef __alpha__
+#if !defined(__alpha__) && !defined(__mips__)
 /*
  * For backwards compatibility?  Functionality superseded by sigaction.
  */

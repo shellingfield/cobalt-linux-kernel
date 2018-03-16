@@ -1,4 +1,4 @@
-/* $Id: openprom.h,v 1.16 1996/04/23 01:54:46 davem Exp $ */
+/* $Id: openprom.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $ */
 #ifndef __SPARC_OPENPROM_H
 #define __SPARC_OPENPROM_H
 

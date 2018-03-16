@@ -1,4 +1,4 @@
-/* $Id: kgdb.h,v 1.7 1995/11/27 02:43:18 davem Exp $
+/* $Id: kgdb.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $
  * kgdb.h: Defines and declarations for serial line source level
  *         remote debugging of the Linux kernel using gdb.
  *

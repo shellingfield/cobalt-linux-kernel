@@ -1,4 +1,4 @@
-/* $Id: l3dss1.c,v 1.16 1997/06/03 20:43:46 keil Exp $
+/* $Id: l3dss1.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * EURO/DSS1 D-channel protocol
  *
@@ -9,6 +9,9 @@
  *              Fritz Elfert
  *
  * $Log: l3dss1.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.16  1997/06/03 20:43:46  keil
  * Display numbers as default
  *
@@ -67,7 +70,7 @@
 #include <linux/ctype.h>
 
 extern char *HiSax_getrev(const char *revision);
-const char *dss1_revision = "$Revision: 1.16 $";
+const char *dss1_revision = "$Revision: 1.1 $";
 
 #define	MsgHead(ptr, cref, mty) \
 	*ptr++ = 0x8; \

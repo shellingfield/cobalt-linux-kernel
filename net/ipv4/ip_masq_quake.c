@@ -20,7 +20,6 @@
  *  
  */
 
-#include <linux/config.h>
 #include <linux/module.h>
 
 #include <linux/types.h>
@@ -41,7 +40,7 @@
  * List of ports (up to MAX_MASQ_APP_PORTS) to be handled by helper
  * First ports are set to the default port.
  */
-int ports[MAX_MASQ_APP_PORTS] = { 26000,   /* I rely on the trailing items */
+static int ports[MAX_MASQ_APP_PORTS] = { 26000,   /* I rely on the trailing items */
 				  27000 }; /* being set to zero */
 struct ip_masq_app *masq_incarnations[MAX_MASQ_APP_PORTS];
 

@@ -303,6 +303,10 @@ void * vmalloc(unsigned long size)
  */
 void * vremap(unsigned long offset, unsigned long size)
 {
+#ifdef CONFIG_COBALT_27
+	extern unsigned long isa_slot_offset;
+	return (void *) (isa_slot_offset + offset);
+#else
 	void * addr;
 	struct vm_struct * area;
 
@@ -322,6 +326,7 @@ void * vremap(unsigned long offset, unsigned long size)
 		return NULL;
 	}
 	return addr;
+#endif
 }
 
 int vread(char *buf, char *addr, int count)

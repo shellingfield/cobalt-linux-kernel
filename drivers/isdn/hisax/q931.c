@@ -1,4 +1,4 @@
-/* $Id: q931.c,v 1.5 1997/04/06 22:56:43 keil Exp $
+/* $Id: q931.c,v 1.1 1997/11/29 02:01:35 davem Exp $
 
  * q931.c       code to decode ITU Q.931 call control messages
  *
@@ -14,6 +14,9 @@
  *
  *
  * $Log: q931.c,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.5  1997/04/06 22:56:43  keil
  * Some cosmetic changes
  *

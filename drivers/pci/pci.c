@@ -400,6 +400,7 @@ struct pci_dev_info dev_info[] = {
 	DEVICE( LITEON,		LITEON_LNE100TX,"LNE100TX"),
 	DEVICE( NP,		NP_PCI_FDDI,	"NP-PCI"),       
 	DEVICE( ATT,		ATT_L56XMF,	"L56xMF"),
+	BRIDGE( GALILEO,	GALILEO_GT64011, "GT64011", 0x00),
 	DEVICE( SPECIALIX,	SPECIALIX_XIO,	"XIO/SIO host"),
 	DEVICE( SPECIALIX,	SPECIALIX_RIO,	"RIO host"),
 	DEVICE( AURAVISION,	AURAVISION_VXP524,"VXP524"),
@@ -1123,7 +1124,7 @@ static unsigned int scan_bus(struct pci_bus *bus, unsigned long *mem_startp)
 		 */
 		info = pci_lookup_dev(dev->vendor, dev->device);
 		if (!info) {
-#if 0
+#if 0 /* COBALT local change, we don't need to see this in the logs... */
 			printk("Warning : Unknown PCI device (%x:%x).  Please read include/linux/pci.h\n",
 				dev->vendor, dev->device);
 #endif

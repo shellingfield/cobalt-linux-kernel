@@ -370,14 +370,10 @@ extern inline int suser(void)
 }
 
 extern void copy_thread(int, unsigned long, unsigned long, struct task_struct *, struct pt_regs *);
-extern void flush_thread(void);
-extern void exit_thread(void);
-
 extern void exit_mm(struct task_struct *);
 extern void exit_fs(struct task_struct *);
 extern void exit_files(struct task_struct *);
 extern void exit_sighand(struct task_struct *);
-extern void release_thread(struct task_struct *);
 
 extern int do_execve(char *, char **, char **, struct pt_regs *);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *);

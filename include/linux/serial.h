@@ -183,7 +183,8 @@ struct async_struct {
  * Events are used to schedule things to happen at timer-interrupt
  * time, instead of at rs interrupt time.
  */
-#define RS_EVENT_WRITE_WAKEUP	0
+#define RS_EVENT_WRITE_WAKEUP		0
+#define PCI_RS_EVENT_WRITE_WAKEUP	0
 
 /*
  * Multiport serial configuration structure --- internal structure
@@ -199,6 +200,7 @@ struct rs_multiport_struct {
 	unsigned char	mask4, match4;
 	int		port_monitor;
 };
+#define pci_rs_multiport_struct rs_multiport_struct
 
 /* Export to allow PCMCIA to use this - Dave Hinds */
 extern int register_serial(struct serial_struct *req);

@@ -1,4 +1,4 @@
-/* $Id: isdn_common.h,v 1.6 1997/02/28 02:32:44 fritz Exp $
+/* $Id: isdn_common.h,v 1.2 1997/11/29 02:01:37 davem Exp $
 
  * header for Linux ISDN subsystem, common used functions and debugging-switches (linklevel).
  *
@@ -21,6 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_common.h,v $
+ * Revision 1.2  1997/11/29 02:01:37  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.6  1997/02/28 02:32:44  fritz
  * Cleanup: Moved some tty related stuff from isdn_common.c
  *          to isdn_tty.c

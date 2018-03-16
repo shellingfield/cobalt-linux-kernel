@@ -454,6 +454,25 @@ static unsigned long get_wchan(struct task_struct *p)
 	    }
 	    return pc;
 	}
+#elif defined(__mips__)
+	/*
+	 * The same comment as on the Alpha applies here, too ...
+	 */
+	{
+#if 0 /* XXX NO way, I get kernel faults with this code -DaveM */
+		unsigned long schedule_frame;
+		unsigned long pc;
+
+		pc = thread_saved_pc(&p->tss);
+		if (pc >= (unsigned long) interruptible_sleep_on && pc < (unsigned long) add_timer) {
+			schedule_frame = ((unsigned long *)(long)p->tss.reg30)[16];
+			return (unsigned long)((unsigned long *)schedule_frame)[11];
+		}
+		return pc;
+#else
+		return 0;
+#endif
+	}
 #endif
 	return 0;
 }
@@ -474,6 +493,11 @@ static unsigned long get_wchan(struct task_struct *p)
                                  + (long)&((struct pt_regs *)0)->reg)
 # define KSTK_EIP(tsk)  (*(unsigned long *)(tsk->kernel_stack_page + PT_REG(pc)))
 # define KSTK_ESP(tsk)  (*(unsigned long *)(tsk->kernel_stack_page + PT_REG(u_regs[UREG_FP])))
+#elif defined(__mips__)
+# define PT_REG(reg)            ((long)&((struct pt_regs *)0)->reg \
+                                 - sizeof(struct pt_regs))
+# define KSTK_EIP(tsk)  (*(unsigned long *)((tsk)->tss.ksp + PT_REG(cp0_epc)))
+# define KSTK_ESP(tsk)  (*(unsigned long *)((tsk)->tss.ksp + PT_REG(regs[29])))
 #endif
 
 /* Gcc optimizes away "strlen(x)" for constant x */

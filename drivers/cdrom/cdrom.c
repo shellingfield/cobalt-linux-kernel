@@ -21,7 +21,7 @@
 
 #define FM_WRITE	0x2                 /* file mode write bit */
 
-#define VERSION "$Id: cdrom.c,v 0.8 1996/08/10 10:52:11 david Exp $"
+#define VERSION "$Id: cdrom.c,v 1.2 1998/06/13 11:00:17 davem Exp $"
 
 /* Not-exported routines. */
 int cdrom_open(struct inode *ip, struct file *fp);

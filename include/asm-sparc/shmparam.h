@@ -1,4 +1,4 @@
-/* $Id: shmparam.h,v 1.3 1995/11/25 02:32:42 davem Exp $ */
+/* $Id: shmparam.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $ */
 #ifndef _ASMSPARC_SHMPARAM_H
 #define _ASMSPARC_SHMPARAM_H
 

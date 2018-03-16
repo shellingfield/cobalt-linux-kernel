@@ -2,7 +2,7 @@
  *		IP_MASQ_FTP CUSeeMe masquerading module
  *
  *
- * Version:	@(#)$Id: ip_masq_cuseeme.c,v 1.1.2.2 1997/05/29 18:27:41 davem Exp $
+ * Version:	@(#)$Id: ip_masq_cuseeme.c,v 1.3 1998/04/24 18:33:46 davem Exp $
  *
  * Author:	Richard Lynch
  *		
@@ -88,7 +88,7 @@ typedef struct {
  * List of ports (up to MAX_MASQ_APP_PORTS) to be handled by helper
  * First port is set to the default port.
  */
-int ports[MAX_MASQ_APP_PORTS] = {7648}; /* I rely on the trailing items being set to zero */
+static int ports[MAX_MASQ_APP_PORTS] = {7648}; /* I rely on the trailing items being set to zero */
 struct ip_masq_app *masq_incarnations[MAX_MASQ_APP_PORTS];
 
 static int

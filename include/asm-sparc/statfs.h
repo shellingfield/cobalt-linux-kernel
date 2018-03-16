@@ -1,4 +1,4 @@
-/* $Id: statfs.h,v 1.3 1995/11/25 02:32:54 davem Exp $ */
+/* $Id: statfs.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $ */
 #ifndef _SPARC_STATFS_H
 #define _SPARC_STATFS_H
 

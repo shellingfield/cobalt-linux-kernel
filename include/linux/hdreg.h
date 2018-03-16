@@ -152,28 +152,32 @@ struct hd_driveid {
 	unsigned short  eide_dma_time;	/* recommended mword dma cycle time (ns) */
 	unsigned short  eide_pio;       /* min cycle time (ns), no IORDY  */
 	unsigned short  eide_pio_iordy; /* min cycle time (ns), with IORDY */
-	unsigned short  word69;
-	unsigned short  word70;
-	/* HDIO_GET_IDENTITY currently returns only words 0 through 70 */
-	unsigned short  word71;
-	unsigned short  word72;
-	unsigned short  word73;
-	unsigned short  word74;
-	unsigned short  word75;
-	unsigned short  word76;
-	unsigned short  word77;
-	unsigned short  word78;
-	unsigned short  word79;
-	unsigned short  word80;
-	unsigned short  word81;
-	unsigned short  word82;
-	unsigned short  word83;
-	unsigned short  word84;
-	unsigned short  word85;
-	unsigned short  word86;
-	unsigned short  word87;
-	unsigned short  dma_ultra;
-	unsigned short  reserved[167];
+	unsigned short  reserved69;	/* reserved (word 69) */
+	unsigned short  reserved70;	/* reserved (word 70) */
+	unsigned short  reserved71;	/* reserved (word 71) */
+	unsigned short  reserved72;	/* reserved (word 72) */
+	unsigned short  reserved73;	/* reserved (word 73) */
+	unsigned short  reserved74;	/* reserved (word 74) */
+	unsigned short	queue_len;
+	unsigned short  reserved76;	/* reserved (word 76) */
+	unsigned short  reserved77;	/* reserved (word 77) */
+	unsigned short  reserved78;	/* reserved (word 78) */
+	unsigned short  reserved79;	/* reserved (word 79) */
+	unsigned short	vers_major;
+	unsigned short	vers_minor;
+	unsigned short	features1;
+	unsigned short	features2;
+	unsigned short	features3;
+	unsigned short	fenable1;
+	unsigned short	fenable2;
+	unsigned short	fenable3;
+	unsigned short	udma_modes;
+	unsigned short	erase_time;
+	unsigned short	enh_etime;
+	unsigned short	apm_level;
+	unsigned short	reserver92[34];
+	unsigned short	rmvcap;
+	unsigned short	secure_lvl;
 };
 
 #ifdef __KERNEL__

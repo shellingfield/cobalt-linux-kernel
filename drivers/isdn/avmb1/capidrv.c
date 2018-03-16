@@ -1,11 +1,14 @@
 /*
- * $Id: capidrv.c,v 1.3.2.1 1997/07/13 12:16:48 calle Exp $
+ * $Id: capidrv.c,v 1.1 1997/11/29 02:01:32 davem Exp $
  *
  * ISDN4Linux Driver, using capi20 interface (kernelcapi)
  *
  * Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  *
  * $Log: capidrv.c,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.3.2.1  1997/07/13 12:16:48  calle
  * bug fix for more than one controller in connect_req.
  *
@@ -51,7 +54,7 @@
 #include "capicmd.h"
 #include "capidrv.h"
 
-static char *revision = "$Revision: 1.3.2.1 $";
+static char *revision = "$Revision: 1.1 $";
 int debugmode = 0;
 
 #ifdef HAS_NEW_SYMTAB

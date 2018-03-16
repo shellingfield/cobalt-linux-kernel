@@ -1,4 +1,4 @@
-/* $Id: fsm.c,v 1.4 1997/04/06 22:56:42 keil Exp $
+/* $Id: fsm.c,v 1.1 1997/11/29 02:01:33 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
@@ -7,6 +7,9 @@
  *              Fritz Elfert
  *
  * $Log: fsm.c,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.4  1997/04/06 22:56:42  keil
  * Some cosmetic changes
  *

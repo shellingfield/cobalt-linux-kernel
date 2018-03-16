@@ -1,4 +1,4 @@
-#define RCS_ID "$Id: scc.c,v 1.67 1997/04/10 15:24:41 jreuter Exp jreuter $"
+#define RCS_ID "$Id: scc.c,v 1.3 1998/06/13 10:59:31 davem Exp $"
 
 #define BANNER "Z8530 SCC driver version 2.4c.dl1bke (experimental) by DL1BKE\n"
 
@@ -88,13 +88,14 @@
    960607	- switching off receiver while transmission in halfduplex
    		  mode with external MODEM clock.
    		  
+   		  
    960715	- rewrote interrupt service routine for "polling" mode,
    		  fixed bug in grouping algorithm.
    		  
    960719	- New transmit timer routines (let's see what it breaks),
    		  some improvements regarding DCD and SYNC interrupts,
    		  clean-up of printk().
-   		  
+
    960725	- Fixed Maxkeyup problems. Will generate HDLC abort and
    		  recover now.
 
@@ -129,9 +130,9 @@
    
    NB -- if you find errors, change something, please let me know
       	 first before you distribute it... And please don't touch
-   	 the version number. Just replace my callsign in
    	 "v2.4c.dl1bke" with your own. Just to avoid confusion...
 
+   	 the version number. Just replace my callsign in
    If you want to add your modification to the linux distribution
    please (!) contact me first.
    

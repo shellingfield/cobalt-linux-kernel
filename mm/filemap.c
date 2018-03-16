@@ -971,7 +971,7 @@ int filemap_swapout(struct vm_area_struct * vma,
 	unsigned long page = pte_page(*page_table);
 	unsigned long entry = SWP_ENTRY(SHM_SWP_TYPE, MAP_NR(page));
 
-	flush_cache_page(vma, (offset + vma->vm_start - vma->vm_offset));
+	flush_cache_page(vma, (offset + vma->vm_start - vma->vm_offset), *page_table);
 	set_pte(page_table, __pte(entry));
 	flush_tlb_page(vma, (offset + vma->vm_start - vma->vm_offset));
 	error = filemap_write_page(vma, offset, page);
@@ -1013,13 +1013,13 @@ static inline int filemap_sync_pte(pte_t * ptep, struct vm_area_struct *vma,
 		if (!pte_dirty(pte))
 			return 0;
 		flush_page_to_ram(pte_page(pte));
-		flush_cache_page(vma, address);
+		flush_cache_page(vma, address, pte);
 		set_pte(ptep, pte_mkclean(pte));
 		flush_tlb_page(vma, address);
 		page = pte_page(pte);
 		mem_map[MAP_NR(page)].count++;
 	} else {
-		flush_cache_page(vma, address);
+		flush_cache_page(vma, address, pte);
 		pte_clear(ptep);
 		flush_tlb_page(vma, address);
 		if (!pte_present(pte)) {

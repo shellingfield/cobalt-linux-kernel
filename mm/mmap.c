@@ -63,11 +63,17 @@ int vm_enough_memory(long pages)
 	return freepages > pages;
 }
 
+/* A big win, but disabled until further notice -DaveM */
+/* #define SYSBRK_OPTIMIZE */
+
 asmlinkage unsigned long sys_brk(unsigned long brk)
 {
 	unsigned long rlim;
 	unsigned long newbrk, oldbrk;
 	struct mm_struct *mm = current->mm;
+#ifdef SYSBRK_OPTIMIZE
+	struct vm_area_struct *vma;
+#endif
 
 	if (brk < mm->end_code)
 		return mm->brk;
@@ -92,6 +98,11 @@ asmlinkage unsigned long sys_brk(unsigned long brk)
 		rlim = ~0;
 	if (brk - mm->end_code > rlim)
 		return mm->brk;
+#ifdef SYSBRK_OPTIMIZE
+	if (((newbrk - oldbrk) + (mm->total_vm << PAGE_SHIFT))
+	    > current->rlim[RLIMIT_AS].rlim_cur)
+		return mm->brk;
+#endif
 
 	/*
 	 * Check against existing mmap mappings.
@@ -108,10 +119,32 @@ asmlinkage unsigned long sys_brk(unsigned long brk)
 	/*
 	 * Ok, looks good - let it rip.
 	 */
+#ifdef SYSBRK_OPTIMIZE
+	vma = find_vma(mm, mm->start_brk);
+
+	/* Two important cases, when the BRK area does not exist yet _or_
+	 * the neighbor relationship rules have changed due to this
+	 * operation, we must rebalance the AVL tree.  This happens rarely,
+	 * so the checks here every time are worth it.  -DaveM
+	 */
+	if(vma == NULL ||
+	   (vma->vm_avl_left && newbrk > vma->vm_avl_left->vm_end)) {
+		if(do_mmap(NULL, oldbrk, newbrk-oldbrk,
+			   PROT_READ|PROT_WRITE|PROT_EXEC,
+			   MAP_FIXED|MAP_PRIVATE, 0) != oldbrk)
+			return mm->brk;
+	} else {
+		/* Else, the optimization is valid. */
+		vma->vm_end = newbrk;
+		mm->total_vm += (newbrk - oldbrk) >> PAGE_SHIFT;
+	}
+#else /* !SYSBRK_OPTIMIZE */
 	if(do_mmap(NULL, oldbrk, newbrk-oldbrk,
 		PROT_READ|PROT_WRITE|PROT_EXEC,
 		   MAP_FIXED|MAP_PRIVATE, 0) != oldbrk)
 		return mm->brk;
+#endif
+
 	return mm->brk = brk;
 }
 
@@ -715,8 +748,8 @@ static void avl_check (struct task_struct * task, char *caller)
  * Case 4 involves the creation of 2 new areas, for each side of
  * the hole.
  */
-static void unmap_fixup(struct vm_area_struct *area,
-		 unsigned long addr, size_t len)
+static int unmap_fixup(struct vm_area_struct *area,
+		       unsigned long addr, size_t len)
 {
 	struct vm_area_struct *mpnt;
 	unsigned long end = addr + len;
@@ -727,7 +760,7 @@ static void unmap_fixup(struct vm_area_struct *area,
 	{
 		printk("unmap_fixup: area=%lx-%lx, unmap %lx-%lx!!\n",
 		       area->vm_start, area->vm_end, addr, end);
-		return;
+		return 1;
 	}
 	area->vm_mm->total_vm -= len >> PAGE_SHIFT;
 	if (area->vm_flags & VM_LOCKED)
@@ -739,7 +772,7 @@ static void unmap_fixup(struct vm_area_struct *area,
 			area->vm_ops->close(area);
 		if (area->vm_inode)
 			iput(area->vm_inode);
-		return;
+		return 0;
 	}
 
 	/* Work out to one of the ends */
@@ -756,7 +789,7 @@ static void unmap_fixup(struct vm_area_struct *area,
 		mpnt = (struct vm_area_struct *)kmalloc(sizeof(*mpnt), GFP_KERNEL);
 
 		if (!mpnt)
-			return;
+			return 1;
 		*mpnt = *area;
 		mpnt->vm_offset += (end - area->vm_start);
 		mpnt->vm_start = end;
@@ -771,7 +804,7 @@ static void unmap_fixup(struct vm_area_struct *area,
 	/* construct whatever mapping is needed */
 	mpnt = (struct vm_area_struct *)kmalloc(sizeof(*mpnt), GFP_KERNEL);
 	if (!mpnt)
-		return;
+		return 1;
 	*mpnt = *area;
 	if (mpnt->vm_ops && mpnt->vm_ops->open)
 		mpnt->vm_ops->open(mpnt);
@@ -780,6 +813,7 @@ static void unmap_fixup(struct vm_area_struct *area,
 		area->vm_ops->close(area);
 	}
 	insert_vm_struct(current->mm, mpnt);
+	return 0;
 }
 
 asmlinkage int sys_munmap(unsigned long addr, size_t len)
@@ -848,9 +882,11 @@ int do_munmap(unsigned long addr, size_t len)
 
 		if (mpnt->vm_ops && mpnt->vm_ops->unmap)
 			mpnt->vm_ops->unmap(mpnt, st, end-st);
+		flush_cache_range(current->mm, st, end);
 		zap_page_range(current->mm, st, end-st);
-		unmap_fixup(mpnt, st, end-st);
-		kfree(mpnt);
+		flush_tlb_range(current->mm, st, end);
+		if(unmap_fixup(mpnt, st, end-st) == 0)
+			kfree(mpnt);
 	} while (free);
 
 	/* we could zap the page tables here too.. */

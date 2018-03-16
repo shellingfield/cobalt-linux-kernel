@@ -36,6 +36,9 @@
 
 /*
  * $Log: t128.h,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  */
 
 #ifndef T128_H

@@ -109,6 +109,7 @@
 #include <linux/module.h>
 #endif
 
+#include <linux/config.h>
 #include <asm/dma.h>
 #include <asm/io.h>
 #include <asm/system.h>
@@ -125,6 +126,11 @@
 #include <linux/time.h>
 #include <linux/timer.h>
 #include <linux/stat.h>
+
+#ifdef CONFIG_COBALT_27
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#endif
 
 #include <linux/version.h>
 #if LINUX_VERSION_CODE >= LinuxVersionCode(1,3,0)
@@ -150,6 +156,11 @@
 #include "sd.h"
 
 #include <linux/types.h>
+
+#ifdef CONFIG_COBALT_27
+/* COBALT LOCAL: Needed because our mips is not DMA coherent. -DaveM */
+#define CACHED_TO_UNCACHED(x)         (((unsigned long)(x) & (unsigned long)0x1fffffff) + KSEG1)
+#endif
 
 /*
 **	Define the BSD style u_int32 type
@@ -4408,11 +4419,21 @@ printf(KERN_INFO "ncr53c%s-%d: rev=0x%02x, base=0x%x, io_port=0x%x, irq=%d\n",
 	**	bursting when copying the global header.
 	*/
 	np        = (ncb_p) (((u_long) &host_data->_ncb_data) & NCB_ALIGN_MASK);
-	host_data->ncb = np;
 	bzero (np, sizeof (*np));
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: We're not DMA coherent, so reference in uncached space.  -DaveM */
+	flush_cache_pre_dma_out((unsigned long)np, sizeof(*np));
+	np = (ncb_p) CACHED_TO_UNCACHED(np);
+#endif
+	host_data->ncb = np;
 
 	np->ccb   = (ccb_p) (((u_long) &host_data->_ccb_data) & CCB_ALIGN_MASK);
 	bzero (np->ccb, sizeof (*np->ccb));
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: We're not DMA coherent, so reference in uncached space.  -DaveM */
+	flush_cache_pre_dma_out((unsigned long)np->ccb, sizeof(*np->ccb));
+	np->ccb = (ccb_p) CACHED_TO_UNCACHED(np->ccb);
+#endif
 
 	/*
 	**	Store input informations in the host data structure.
@@ -4431,6 +4452,13 @@ printf(KERN_INFO "ncr53c%s-%d: rev=0x%02x, base=0x%x, io_port=0x%x, irq=%d\n",
 	np->script0  =
 	(struct script *) (((u_long) &host_data->script_data) & SCR_ALIGN_MASK);
 	np->scripth0 = &host_data->scripth_data;
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: We're not DMA coherent, so reference in uncached space.  -DaveM */
+	flush_cache_pre_dma_out((unsigned long)np->script0, sizeof(*np->script0));
+	np->script0 = (struct script *) CACHED_TO_UNCACHED(np->script0);
+	flush_cache_pre_dma_out((unsigned long)np->scripth0, sizeof(*np->scripth0));
+	np->scripth0 = (struct scripth *) CACHED_TO_UNCACHED(np->scripth0);
+#endif
 
 	/*
 	**    Initialize timer structure
@@ -4590,7 +4618,7 @@ printf(KERN_INFO "ncr53c%s-%d: rev=0x%02x, base=0x%x, io_port=0x%x, irq=%d\n",
 	**	Install the interrupt handler.
 	*/
 #if LINUX_VERSION_CODE >= LinuxVersionCode(1,3,70)
-#ifdef SCSI_NCR_SHARE_IRQ
+#if defined(SCSI_NCR_SHARE_IRQ)
 	if (bootverbose > 1)
 		printf("%s: requesting shared irq %d (dev_id=0x%lx)\n",
 		        ncr_name(np), device->slot.irq, (u_long) np);
@@ -5114,6 +5142,10 @@ int ncr_queue_command (Scsi_Cmnd *cmd, void (* done)(Scsi_Cmnd *))
 	*/
 	cp->phys.cmd.addr		= cpu_to_scr(vtophys (&cmd->cmnd[0]));
 	cp->phys.cmd.size		= cpu_to_scr(cmd->cmd_len);
+#ifdef CONFIG_COBALT_27
+	flush_cache_pre_dma_out((unsigned long)&cmd->cmnd[0],
+				sizeof(cmd->cmnd));
+#endif
 	/*
 	**	sense command
 	*/
@@ -5131,6 +5163,10 @@ int ncr_queue_command (Scsi_Cmnd *cmd, void (* done)(Scsi_Cmnd *))
 	cp->phys.sense.addr		=
 			cpu_to_scr(vtophys (&cmd->sense_buffer[0]));
 	cp->phys.sense.size		= cpu_to_scr(sizeof(cmd->sense_buffer));
+#ifdef CONFIG_COBALT_27
+	flush_cache_pre_dma_out((unsigned long)&cmd->sense_buffer[0],
+				sizeof(cmd->sense_buffer));
+#endif
 	/*
 	**	status
 	*/
@@ -8292,6 +8328,11 @@ static	void ncr_alloc_ccb (ncb_p np, u_long target, u_long lun)
 		**	Initialize it
 		*/
 		bzero (lp, sizeof (*lp));
+#ifdef CONFIG_COBALT_27
+		/* COBALT LOCAL: We're not DMA coherent, so reference in uncached space.  -DaveM */
+		flush_cache_pre_dma_out((unsigned long)lp, sizeof(*lp));
+		lp = (lcb_p) CACHED_TO_UNCACHED(lp);
+#endif
 		lp->jump_lcb.l_cmd   =
 			cpu_to_scr(SCR_JUMP ^ IFFALSE (DATA (lun)));
 		lp->jump_lcb.l_paddr = tp->jump_lcb.l_paddr;
@@ -8353,6 +8394,12 @@ static	void ncr_alloc_ccb (ncb_p np, u_long target, u_long lun)
 	**	Initialize it
 	*/
 	bzero (cp, sizeof (*cp));
+
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: We're not DMA coherent, so reference in uncached space.  -DaveM */
+	flush_cache_pre_dma_out((unsigned long)cp, sizeof(*cp));
+	cp = (ccb_p) CACHED_TO_UNCACHED(cp);
+#endif
 
 	/*
 	**	Fill in physical addresses
@@ -8482,6 +8529,10 @@ static	int	ncr_scatter(ccb_p cp, Scsi_Cmnd *cmd)
 			data = &data[MAX_SCATTER - 1];
 			data[0].addr = cpu_to_scr(vtophys(cmd->request_buffer));
 			data[0].size = cpu_to_scr(cmd->request_bufflen);
+#ifdef CONFIG_COBALT_27
+			flush_cache_pre_dma_out((unsigned long)cmd->request_buffer,
+						cmd->request_bufflen);
+#endif
 			cp->data_len = cmd->request_bufflen;
 			segment = 1;
 		}
@@ -8496,6 +8547,10 @@ static	int	ncr_scatter(ccb_p cp, Scsi_Cmnd *cmd)
 			data[segment].size =
 				cpu_to_scr(scatter[segment].length);
 			cp->data_len	   += scatter[segment].length;
+#ifdef CONFIG_COBALT_27
+			flush_cache_pre_dma_out((unsigned long)scatter[segment].address,
+						scatter[segment].length);
+#endif
 			++segment;
 		}
 	}
@@ -8556,6 +8611,7 @@ static int ncr_snooptest (struct ncb* np)
             if (err) return (err);
 	}
 #endif
+
 	/*
 	**	init
 	*/
@@ -9373,6 +9429,14 @@ static int ncr53c8xx_pci_init(Scsi_Host_Template *tpnt,
 		printk("ncr53c8xx: not initializing, device not supported\n");
 		return -1;
 	}
+
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL:  Various PCI fixups for us.  */
+	(void) pcibios_write_config_byte(bus, device_fn, PCI_LATENCY_TIMER, 64);
+	latency_timer = 64;
+	(void) pcibios_write_config_byte(bus, device_fn, PCI_CACHE_LINE_SIZE, 32);
+	cache_line_size = 32;
+#endif
 
 #ifdef __powerpc__
 	/*

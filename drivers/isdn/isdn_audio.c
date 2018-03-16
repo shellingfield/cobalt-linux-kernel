@@ -1,4 +1,4 @@
-/* $Id: isdn_audio.c,v 1.8 1997/03/02 14:29:16 fritz Exp $
+/* $Id: isdn_audio.c,v 1.2 1997/11/29 02:01:36 davem Exp $
 
  * Linux ISDN subsystem, audio conversion and compression (linklevel).
  *
@@ -20,6 +20,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_audio.c,v $
+ * Revision 1.2  1997/11/29 02:01:36  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.8  1997/03/02 14:29:16  fritz
  * More ttyI related cleanup.
  *
@@ -53,7 +56,7 @@
 #include "isdn_audio.h"
 #include "isdn_common.h"
 
-char *isdn_audio_revision = "$Revision: 1.8 $";
+char *isdn_audio_revision = "$Revision: 1.2 $";
 
 /*
  * Misc. lookup-tables.

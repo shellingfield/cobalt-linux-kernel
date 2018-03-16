@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/calibr.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/calibr.h,v $
+ $Author: davem $
  *
- $Revision: 1.20 $
- $Date: 1995/04/22 07:30:15 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:41 $
+ $State: Exp $
  *
  *      This file contains a gp calibration routine for
  *      hardware dependent timeout functions.

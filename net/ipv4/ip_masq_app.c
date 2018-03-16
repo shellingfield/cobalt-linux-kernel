@@ -482,9 +482,15 @@ done:
  *	Initialization routine
  */
 
+extern int ip_masq_ftp_init(void);
+extern int ip_masq_irc_init(void);
+extern int ip_masq_raudio_init(void);
+extern int ip_masq_cuseeme_init(void);
+extern int ip_masq_vdolive_init(void);
+extern int ip_masq_quake_init(void);
+
 int ip_masq_app_init(void)
 {
-        
         register_symtab (&ip_masq_app_syms);
 #ifdef CONFIG_PROC_FS        
 	proc_net_register(&(struct proc_dir_entry) {
@@ -494,6 +500,15 @@ int ip_masq_app_init(void)
 		ip_masq_app_getinfo
  	});
 #endif        
+	/* COBALT LOCAL: Now init all the app support subsystems, we
+	 *               don't have working loadable modules yet so... -DaveM
+	 */
+	ip_masq_ftp_init();
+	ip_masq_irc_init();
+	ip_masq_raudio_init();
+	ip_masq_cuseeme_init();
+	ip_masq_vdolive_init();
+	ip_masq_quake_init();
         return 0;
 }
 

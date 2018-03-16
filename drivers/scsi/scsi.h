@@ -375,7 +375,8 @@ typedef struct scsi_cmnd {
     struct scsi_cmnd *next, *prev, *device_next, *reset_chain;
     
     /* These elements define the operation we are about to perform */
-    unsigned char cmnd[12];
+    unsigned char cmnd[12] __attribute__ ((aligned (32)));
+    unsigned char __cmnd_cacheline_pad[64 - 12];
     unsigned request_bufflen;	/* Actual request size */
     
     void * request_buffer;	/* Actual requested buffer */
@@ -401,7 +402,9 @@ typedef struct scsi_cmnd {
     
     struct request request;	/* A copy of the command we are working on */
 
-    unsigned char sense_buffer[16];  /* Sense for this command, if needed */
+    /* Sense for this command, if needed */
+    unsigned char sense_buffer[16] __attribute__ ((aligned (32)));
+    unsigned char __sense_cacheline_pad[64 - 16];
 
     /*
       A SCSI Command is assigned a nonzero serial_number when internal_cmnd
@@ -521,8 +524,23 @@ static Scsi_Cmnd * end_scsi_request(Scsi_Cmnd * SCpnt, int uptodate, int sectors
 	    req->nr_sectors -= bh->b_size >> 9;
 	    req->sector += bh->b_size >> 9;
 	    bh->b_reqnext = NULL;
-	    mark_buffer_uptodate(bh, uptodate);
-	    unlock_buffer(bh);
+	    /*
+	     * This is our 'MD IO has finished' event handler.
+	     * note that b_state should be cached in a register
+	     * anyways, so the overhead if this checking is almost 
+	     * zero. But anyways .. we never get OO for free :)
+	     */
+	    if (test_bit(BH_MD, &bh->b_state)) {
+		struct md_personality * pers=(struct md_personality *)bh->personality;
+		pers->end_request(bh,uptodate);
+	    }
+	    /*
+	     * the normal (nonmirrored and no RAID5) case:
+	     */
+	    else {
+		mark_buffer_uptodate(bh, uptodate);
+		unlock_buffer(bh);
+	    }
 	    sectors -= bh->b_size >> 9;
 	    if ((bh = req->bh) != NULL) {
 		req->current_nr_sectors = bh->b_size >> 9;

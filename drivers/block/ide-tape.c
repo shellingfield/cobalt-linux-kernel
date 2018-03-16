@@ -1546,7 +1546,7 @@ void idetape_issue_packet_command  (ide_drive_t *drive,idetape_packet_command_t 
 	pc->current_position=pc->buffer;	
 	bcount.all=pc->request_transfer;				/* Request to transfer the entire buffer at once */
 
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 	if (pc->dma_error) {
 		printk ("ide-tape: DMA disabled, reverting to PIO\n");
 		drive->using_dma=0;
@@ -1555,7 +1555,7 @@ void idetape_issue_packet_command  (ide_drive_t *drive,idetape_packet_command_t 
 	if (pc->request_transfer && pc->dma_recommended && drive->using_dma) {
 		dma_ok=!(HWIF(drive)->dmaproc(pc->writing ? ide_dma_write : ide_dma_read, drive));
 	}		
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 
 	OUT_BYTE (drive->ctl,IDETAPE_CONTROL_REG);
 	OUT_BYTE (dma_ok ? 1:0,IDETAPE_FEATURES_REG);			/* Use PIO/DMA */
@@ -1587,12 +1587,12 @@ void idetape_issue_packet_command  (ide_drive_t *drive,idetape_packet_command_t 
 	}
 		
 	ide_output_data (drive,pc->c,12/4);			/* Send the actual packet */
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 	if ((pc->dma_in_progress=dma_ok)) {			/* Begin DMA, if necessary */
 		pc->dma_error=0;
 		(void) (HWIF(drive)->dmaproc(ide_dma_begin, drive));
 	}
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 }
 
 /*
@@ -1615,7 +1615,7 @@ void idetape_pc_intr (ide_drive_t *drive)
 	idetape_packet_command_t *pc=tape->pc;
 	unsigned long temp;
 
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 	if (pc->dma_in_progress) {
 		if ((pc->dma_error=HWIF(drive)->dmaproc(ide_dma_status_bad, drive)))
 			/*
@@ -1630,7 +1630,7 @@ void idetape_pc_intr (ide_drive_t *drive)
 		printk ("ide-tape: DMA finished\n");
 #endif /* IDETAPE_DEBUG_LOG */
 	}
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 
 	status.all=IN_BYTE (IDETAPE_STATUS_REG);		/* Clear the interrupt */
 
@@ -1680,7 +1680,7 @@ void idetape_pc_intr (ide_drive_t *drive)
 			(*pc->callback)(drive);			/* Command finished - Call the callback function */
 		return;
 	}
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 	if (pc->dma_in_progress) {
 		pc->dma_in_progress=0;
 		printk ("ide-tape: The tape wants to issue more interrupts in DMA mode\n");
@@ -1689,7 +1689,7 @@ void idetape_pc_intr (ide_drive_t *drive)
 		ide_do_reset (drive);
 		return;
 	}
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 	bcount.b.high=IN_BYTE (IDETAPE_BCOUNTH_REG);			/* Get the number of bytes to transfer */
 	bcount.b.low=IN_BYTE (IDETAPE_BCOUNTL_REG);			/* on this interrupt */
 	ireason.all=IN_BYTE (IDETAPE_IREASON_REG);			/* Read the interrupt reason register */
@@ -2489,7 +2489,7 @@ void idetape_analyze_error (ide_drive_t *drive,idetape_request_sense_result_t *r
 	}
 
 #if 1
-#ifdef CONFIG_BLK_DEV_TRITON
+#if defined(CONFIG_BLK_DEV_TRITON) || defined(CONFIG_BLK_DEV_COBALT)
 
 	/*
 	 *	Correct pc->actually_transferred by asking the tape.
@@ -2499,7 +2499,7 @@ void idetape_analyze_error (ide_drive_t *drive,idetape_request_sense_result_t *r
 		unsigned long *long_ptr=(unsigned long *) &(result->information1);
 		pc->actually_transferred=pc->request_transfer-tape->tape_block_size*idetape_swap_long (*long_ptr);
 	}		
-#endif /* CONFIG_BLK_DEV_TRITON */
+#endif /* CONFIG_BLK_DEV_TRITON || CONFIG_BLK_DEV_COBALT */
 #endif
 }
 

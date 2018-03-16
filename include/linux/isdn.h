@@ -1,4 +1,4 @@
-/* $Id: isdn.h,v 1.32 1997/08/21 09:49:46 fritz Exp $
+/* $Id: isdn.h,v 1.2 1997/11/29 02:02:00 davem Exp $
  *
  * Main header for the Linux ISDN subsystem (linklevel).
  *
@@ -21,6 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  * $Log: isdn.h,v $
+ * Revision 1.2  1997/11/29 02:02:00  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.32  1997/08/21 09:49:46  fritz
  * Increased NET_DV
  *

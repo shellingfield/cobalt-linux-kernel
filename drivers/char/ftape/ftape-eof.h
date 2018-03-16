@@ -21,12 +21,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/ftape-eof.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/ftape-eof.h,v $
+ $Author: davem $
  *
- $Revision: 1.12 $
- $Date: 1995/04/22 07:30:15 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:42 $
+ $State: Exp $
  *
  *      Definitions and declarations for the end of file markers
  *      for the QIC-40/80 floppy-tape driver for Linux.

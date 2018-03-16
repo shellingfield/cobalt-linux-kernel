@@ -1,6 +1,6 @@
 #ifndef _WD7000_H
 
-/* $Id: $
+/* $Id: wd7000.h,v 1.2 1997/11/29 02:01:54 davem Exp $
  *
  * Header file for the WD-7000 driver for Linux
  *

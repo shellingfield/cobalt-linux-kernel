@@ -17,7 +17,7 @@
  */
 
 static const char *version = 
-	"Equalizer1996: $Revision: 1.9 $ $Date: 1996/10/12 11:14:37 $ Simon Janes (simon@ncm.com)\n";
+ 	"Equalizer1996: $Revision: 1.3 $ $Date: 1998/06/13 10:59:37 $ Simon Janes (simon@ncm.com)\n";
 
 /*
  * Sources:
@@ -31,6 +31,12 @@ static const char *version =
 
 /*
  * $Log: eql.c,v $
+ * Revision 1.3  1998/06/13 10:59:37  davem
+ * Merge to 2.0.34
+ *
+ * Revision 1.2  1997/11/29 02:01:40  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.9  1996/10/12 11:14:37  davem
  * Quick merge to 2.0.20
  *

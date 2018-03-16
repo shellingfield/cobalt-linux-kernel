@@ -1,4 +1,4 @@
-/* $Id: elsa.c,v 1.14 1997/04/13 19:53:25 keil Exp $
+/* $Id: elsa.c,v 1.1 1997/11/29 02:01:33 davem Exp $
 
  * elsa.c     low level stuff for Elsa isdn cards
  *
@@ -8,6 +8,9 @@
  *
  *
  * $Log: elsa.c,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.14  1997/04/13 19:53:25  keil
  * Fixed QS1000 init, change in IRQ check delay for SMP
  *
@@ -65,7 +68,7 @@
 
 extern const char *CardType[];
 
-const char *Elsa_revision = "$Revision: 1.14 $";
+const char *Elsa_revision = "$Revision: 1.1 $";
 const char *Elsa_Types[] =
 {"None", "PC", "PCC-8", "PCC-16", "PCF", "PCF-Pro",
  "PCMCIA", "QS 1000", "QS 3000"};

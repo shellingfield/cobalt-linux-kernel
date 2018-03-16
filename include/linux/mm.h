@@ -240,7 +240,7 @@ extern inline unsigned long get_free_page(int priority)
 
 	page = __get_free_page(priority);
 	if (page)
-		memset((void *) page, 0, PAGE_SIZE);
+		clear_page(page);
 	return page;
 }
 

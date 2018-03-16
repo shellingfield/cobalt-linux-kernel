@@ -104,6 +104,9 @@
  
 /*
  * $Log: t128.c,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  */
 
 #include <asm/system.h>

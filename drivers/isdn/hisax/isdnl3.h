@@ -1,6 +1,9 @@
-/* $Id: isdnl3.h,v 1.3 1997/04/06 22:54:17 keil Exp $
+/* $Id: isdnl3.h,v 1.1 1997/11/29 02:01:34 davem Exp $
  *
  * $Log: isdnl3.h,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.3  1997/04/06 22:54:17  keil
  * Using SKB's
  *

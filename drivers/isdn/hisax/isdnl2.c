@@ -1,4 +1,4 @@
-/* $Id: isdnl2.c,v 1.10 1997/05/06 09:38:13 keil Exp $
+/* $Id: isdnl2.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
@@ -7,6 +7,9 @@
  *              Fritz Elfert
  *
  * $Log: isdnl2.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.10  1997/05/06 09:38:13  keil
  * Bugfixes: - clear ack queue entries after resend
  *           - acknowlege each frame to linklevel
@@ -48,7 +51,7 @@
 #include "hisax.h"
 #include "isdnl2.h"
 
-const char *l2_revision = "$Revision: 1.10 $";
+const char *l2_revision = "$Revision: 1.1 $";
 
 static void l2m_debug(struct FsmInst *fi, char *s);
 

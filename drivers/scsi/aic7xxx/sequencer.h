@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *      $Id: sequencer.h,v 1.3 1997/09/27 19:37:31 gibbs Exp $
+ *      $Id: sequencer.h,v 1.2 1998/06/13 11:00:19 davem Exp $
  */
 
 struct ins_format1 {

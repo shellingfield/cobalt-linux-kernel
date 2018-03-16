@@ -1,4 +1,4 @@
-/* $Id: fault.c,v 1.62 1996/04/25 06:09:26 davem Exp $
+/* $Id: fault.c,v 1.1.1.1 1997/10/27 22:44:04 davem Exp $
  * fault.c:  Page fault handlers for the Sparc.
  *
  * Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

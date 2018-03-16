@@ -1,11 +1,14 @@
 /*
- * $Id: b1lli.c,v 1.1.2.1 1997/07/13 12:16:46 calle Exp $
+ * $Id: b1lli.c,v 1.1 1997/11/29 02:01:32 davem Exp $
  * 
  * ISDN lowlevel-module for AVM B1-card.
  * 
  * (c) Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: b1lli.c,v $
+ * Revision 1.1  1997/11/29 02:01:32  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1.2.1  1997/07/13 12:16:46  calle
  * bug fix for more than one controller in connect_req.
  *

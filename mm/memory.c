@@ -57,13 +57,13 @@ unsigned long high_memory = 0;
  * a common occurrence (no need to read the page to know
  * that it's zero - better for the cache and memory subsystem).
  */
-static inline void copy_page(unsigned long from, unsigned long to)
+static inline void copy_cow_page(unsigned long from, unsigned long to)
 {
 	if (from == ZERO_PAGE) {
-		memset((void *) to, 0, PAGE_SIZE);
+		clear_page(to);
 		return;
 	}
-	memcpy((void *) to, (void *) from, PAGE_SIZE);
+	copy_page(to, from);
 }
 
 #define USER_PTRS_PER_PGD (TASK_SIZE / PGDIR_SIZE)
@@ -284,17 +284,12 @@ int copy_page_range(struct mm_struct *dst, struct mm_struct *src,
 	cow = (vma->vm_flags & (VM_SHARED | VM_WRITE)) == VM_WRITE;
 	src_pgd = pgd_offset(src, address);
 	dst_pgd = pgd_offset(dst, address);
-	flush_cache_range(src, vma->vm_start, vma->vm_end);
-	flush_cache_range(dst, vma->vm_start, vma->vm_end);
 	while (address < end) {
 		error = copy_pmd_range(dst_pgd++, src_pgd++, address, end - address, cow);
 		if (error)
 			break;
 		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 	}
-	/* Note that the src ptes get c-o-w treatment, so they change too. */
-	flush_tlb_range(src, vma->vm_start, vma->vm_end);
-	flush_tlb_range(dst, vma->vm_start, vma->vm_end);
 	return error;
 }
 
@@ -384,13 +379,11 @@ int zap_page_range(struct mm_struct *mm, unsigned long address, unsigned long si
 	unsigned long end = address + size;
 
 	dir = pgd_offset(mm, address);
-	flush_cache_range(mm, end - size, end);
 	while (address < end) {
 		zap_pmd_range(dir, address, end - address);
 		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 		dir++;
 	}
-	flush_tlb_range(mm, end - size, end);
 	return 0;
 }
 
@@ -434,13 +427,11 @@ int zeromap_page_range(unsigned long address, unsigned long size, pgprot_t prot)
 {
 	int error = 0;
 	pgd_t * dir;
-	unsigned long beg = address;
 	unsigned long end = address + size;
 	pte_t zero_pte;
 
 	zero_pte = pte_wrprotect(mk_pte(ZERO_PAGE, prot));
 	dir = pgd_offset(current->mm, address);
-	flush_cache_range(current->mm, beg, end);
 	while (address < end) {
 		pmd_t *pmd = pmd_alloc(dir, address);
 		error = -ENOMEM;
@@ -452,7 +443,6 @@ int zeromap_page_range(unsigned long address, unsigned long size, pgprot_t prot)
 		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 		dir++;
 	}
-	flush_tlb_range(current->mm, beg, end);
 	return error;
 }
 
@@ -632,23 +622,23 @@ void do_wp_page(struct task_struct * tsk, struct vm_area_struct * vma,
 		if (new_page) {
 			if (PageReserved(mem_map + MAP_NR(old_page)))
 				++vma->vm_mm->rss;
-			copy_page(old_page,new_page);
+			copy_cow_page(old_page,new_page);
 			flush_page_to_ram(old_page);
 			flush_page_to_ram(new_page);
-			flush_cache_page(vma, address);
+			flush_cache_page(vma, address, pte);
 			set_pte(page_table, pte_mkwrite(pte_mkdirty(mk_pte(new_page, vma->vm_page_prot))));
 			free_page(old_page);
 			flush_tlb_page(vma, address);
 			return;
 		}
-		flush_cache_page(vma, address);
+		flush_cache_page(vma, address, pte);
 		set_pte(page_table, BAD_PAGE);
 		flush_tlb_page(vma, address);
 		free_page(old_page);
 		oom(tsk);
 		return;
 	}
-	flush_cache_page(vma, address);
+	flush_cache_page(vma, address, pte);
 	set_pte(page_table, pte_mkdirty(pte_mkwrite(pte)));
 	flush_tlb_page(vma, address);
 	if (new_page)
@@ -784,7 +774,7 @@ static void partial_clear(struct vm_area_struct *vma, unsigned long address)
 	pte = *page_table;
 	if (!pte_present(pte))
 		return;
-	flush_cache_page(vma, address);
+	flush_cache_page(vma, address, pte);
 	address &= ~PAGE_MASK;
 	address += pte_page(pte);
 	if (address >= high_memory)
@@ -816,7 +806,9 @@ void vmtruncate(struct inode * inode, unsigned long offset)
 
 		/* mapping wholly truncated? */
 		if (mpnt->vm_offset >= offset) {
+			flush_cache_range(mpnt->vm_mm, start, start+len);
 			zap_page_range(mpnt->vm_mm, start, len);
+			flush_tlb_range(mpnt->vm_mm, start, start+len);
 			continue;
 		}
 		/* mapping wholly unaffected? */
@@ -830,7 +822,9 @@ void vmtruncate(struct inode * inode, unsigned long offset)
 			partial_clear(mpnt, start);
 			start = (start + ~PAGE_MASK) & PAGE_MASK;
 		}
+		flush_cache_range(mpnt->vm_mm, start, start + len);
 		zap_page_range(mpnt->vm_mm, start, len);
+		flush_tlb_range(mpnt->vm_mm, start, start + len);
 	} while ((mpnt = mpnt->vm_next_share) != inode->i_mmap);
 }
 
@@ -930,7 +924,7 @@ anonymous_page:
 		unsigned long page = __get_free_page(GFP_KERNEL);
 		if (!page)
 			goto sigbus;
-		memset((void *) page, 0, PAGE_SIZE);
+		clear_page(page);
 		entry = pte_mkwrite(pte_mkdirty(mk_pte(page, vma->vm_page_prot)));
 		vma->vm_mm->rss++;
 		tsk->min_flt++;
@@ -1002,7 +996,7 @@ void handle_mm_fault(struct vm_area_struct * vma, unsigned long address,
 	if (!pte)
 		goto no_memory;
 	handle_pte_fault(vma, address, write_access, pte);
-	update_mmu_cache(vma, address, *pte);
+	update_mmu_cache(vma, address, pte);
 	return;
 no_memory:
 	oom(current);

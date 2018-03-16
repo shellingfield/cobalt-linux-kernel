@@ -1,4 +1,4 @@
-/* $Id: icn.h,v 1.26 1997/02/14 12:23:16 fritz Exp $
+/* $Id: icn.h,v 1.2 1997/11/29 02:02:11 davem Exp $
 
  * ISDN lowlevel-module for the ICN active ISDN-Card.
  *
@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: icn.h,v $
+ * Revision 1.2  1997/11/29 02:02:11  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.26  1997/02/14 12:23:16  fritz
  * Added support for new insmod parameter handling.
  *

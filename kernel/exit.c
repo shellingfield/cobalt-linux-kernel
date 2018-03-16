@@ -19,6 +19,7 @@
 
 #include <asm/segment.h>
 #include <asm/pgtable.h>
+#include <asm/mmu_context.h>
 
 extern void sem_exit (void);
 extern int acct_process (long exitcode);
@@ -493,6 +494,7 @@ static inline void __exit_mm(struct task_struct * tsk)
 	if (mm != &init_mm) {
 		flush_cache_mm(mm);
 		flush_tlb_mm(mm);
+		destroy_context(mm);
 		tsk->mm = &init_mm;
 		tsk->swappable = 0;
 		SET_PAGE_DIR(tsk, swapper_pg_dir);

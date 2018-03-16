@@ -1,4 +1,4 @@
-/* $Id: avm_a1.h,v 1.2 1997/01/21 22:14:36 keil Exp $
+/* $Id: avm_a1.h,v 1.1 1997/11/29 02:01:33 davem Exp $
  *
  * avm_a1.h   Header for AVM A1 (Fritz) ISDN card
  *
@@ -6,6 +6,9 @@
  *
  *
  * $Log: avm_a1.h,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.2  1997/01/21 22:14:36  keil
  * cleanups
  *

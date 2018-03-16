@@ -5,7 +5,7 @@
  *
  * Author:  Marco van Wieringen <mvw@mcs.ow.nl> <mvw@tnix.net> <mvw@cistron.nl>
  *
- * Version: $Id: mount.h,v 1.3 1994/07/20 22:01:00 mvw Exp mvw $
+ * Version: $Id: mount.h,v 1.1.1.1 1997/10/27 22:43:19 davem Exp $
  *
  */
 #ifndef _LINUX_MOUNT_H

@@ -20,12 +20,12 @@
  * USA.
  *
  *
- * $Source: /home/bas/distr/ftape-2.03b/RCS/ecc.h,v $
- * $Author: bas $
+ * $Source: /fargo/cvs/linux/drivers/char/ftape/ecc.h,v $
+ * $Author: davem $
  *
- * $Revision: 1.20 $
- * $Date: 1995/01/08 14:16:21 $
- * $State: Beta $
+ * $Revision: 1.1.1.1 $
+ * $Date: 1997/10/27 22:43:41 $
+ * $State: Exp $
  *
  *      This file contains the definitions for the
  *      Reed-Solomon error correction code 

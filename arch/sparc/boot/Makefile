@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 1995/11/25 00:57:37 davem Exp $
+# $Id: Makefile,v 1.1.1.1 1997/10/27 22:44:01 davem Exp $
 # Makefile for the Sparc low level /boot module.
 #
 # Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

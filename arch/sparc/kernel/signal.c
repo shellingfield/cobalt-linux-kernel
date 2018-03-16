@@ -1,4 +1,4 @@
-/*  $Id: signal.c,v 1.32 1996/04/22 19:37:48 davem Exp $
+/*  $Id: signal.c,v 1.1.1.1 1997/10/27 22:44:02 davem Exp $
  *  linux/arch/sparc/kernel/signal.c
  *
  *  Copyright (C) 1995 David S. Miller (davem@caip.rutgers.edu)

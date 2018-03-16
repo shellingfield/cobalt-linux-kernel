@@ -1891,6 +1891,8 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 
 
 	if (!after(skb->seq, ack_seq)) {
+		int ofo_data_exists = 0;
+
 		if (after(skb->end_seq, ack_seq)) {
 			/* the packet straddles our window end */
 			struct sk_buff_head * list = &sk->receive_queue;
@@ -1903,8 +1905,10 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 			 */
 			next = skb->next;
 			while (next != (struct sk_buff *) list) {
-				if (after(next->seq, ack_seq))
+				if (after(next->seq, ack_seq)) {
+					ofo_data_exists = 1;
 					break;
+				}
 				if (after(next->end_seq, ack_seq))
 					ack_seq = tcp_queue_ack(next, sk);
 				next = next->next;
@@ -1929,8 +1933,12 @@ static void tcp_queue(struct sk_buff * skb, struct sock * sk, struct tcphdr *th)
 		 * Delay the ack if possible.  Send ack's to
 		 * fin frames immediately as there shouldn't be
 		 * anything more to come.
+		 *
+		 * ACK immediately if we still have any out of
+		 * order data.  This is because we desire "maximum
+		 * feedback during loss".  --DaveM
 		 */
-		if (!sk->delay_acks || th->fin) {
+		if (!sk->delay_acks || th->fin || ofo_data_exists) {
 			tcp_send_ack(sk);
 		} else {
 			/*

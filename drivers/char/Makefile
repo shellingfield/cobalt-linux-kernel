@@ -26,11 +26,29 @@ L_OBJS   := tty_io.o n_tty.o console.o \
 
 ifeq ($(CONFIG_SERIAL),y)
   ifndef CONFIG_SUN_SERIAL
-  LX_OBJS += serial.o
+    ifndef CONFIG_COBALT_SERIAL
+    LX_OBJS += serial.o
+    endif
   endif
 else
   ifeq ($(CONFIG_SERIAL),m)
   MX_OBJS += serial.o
+  endif
+endif
+
+ifeq ($(CONFIG_PCI_SERIAL),y)
+  LX_OBJS += pciserial.o
+else
+  ifeq ($(CONFIG_PCI_SERIAL),m)
+  MX_OBJS += pciserial.o
+  endif
+endif
+
+ifeq ($(CONFIG_COBALT_SERIAL),y)
+L_OBJS += cobaltserial.o
+else
+  ifeq ($(CONFIG_COBALT_SERIAL),m)
+  M_OBJS += cobaltserial.o
   endif
 endif
 
@@ -176,6 +194,11 @@ endif
 ifeq ($(CONFIG_RTC),y)
 M = y
 L_OBJS += rtc.o
+endif
+
+ifeq ($(CONFIG_COBALT_LCD),y)
+M = y
+L_OBJS += lcd.o
 endif
 
 ifdef CONFIG_QIC02_TAPE

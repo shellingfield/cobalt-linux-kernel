@@ -1,5 +1,5 @@
 /*
- *  $Id: packet.c,v 1.2 1996/11/20 17:49:55 fritz Exp $
+ *  $Id: packet.c,v 1.1 1997/11/29 02:01:31 davem Exp $
  *  Copyright (C) 1996  SpellCaster Telecommunications Inc.
  *
  *  This program is free software; you can redistribute it and/or modify

@@ -19,6 +19,9 @@
 #define SETNAME                    1	/* set hostname                  */
 #define FLUSH_CACHE		   3	/* writeback and invalidate caches */
 #define MIPS_FIXADE                7	/* control address error fixing  */
+#define MIPS_RDNVRAM              10	/* read NVRAM */
 #define MIPS_ATOMIC_SET		2001	/* atomically set variable       */
+#define MIPS_READ_CMOS		3000
+#define MIPS_WRITE_CMOS		3001
 
 #endif /* __ASM_MIPS_SYSMIPS_H */

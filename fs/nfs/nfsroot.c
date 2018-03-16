@@ -58,8 +58,13 @@
 
 
 /* Define this to allow debugging output */
+#if 1
+#define NFSROOT_DEBUG
+#define NFSROOT_BOOTP_DEBUG
+#else
 #undef NFSROOT_DEBUG
 #undef NFSROOT_BOOTP_DEBUG
+#endif
 
 
 #include <linux/config.h>

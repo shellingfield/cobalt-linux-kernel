@@ -1,4 +1,4 @@
-/* $Id: ashrdi3.S,v 1.2 1995/11/25 00:58:59 davem Exp $
+/* $Id: ashrdi3.S,v 1.1.1.1 1997/10/27 22:44:02 davem Exp $
  * ashrdi3.S:	The filesystem code creates all kinds of references to
  *              this little routine on the sparc with gcc.
  *

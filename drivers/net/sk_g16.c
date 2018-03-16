@@ -6,12 +6,12 @@
  *
  * Module         : sk_g16.c
  *
- * Version        : $Revision: 1.1 $
+ * Version        : $Revision: 1.2 $
  *
  * Author         : Patrick J.D. Weichmann
  *
  * Date Created   : 94/05/26
- * Last Updated   : $Date: 1994/06/30 16:25:15 $
+ * Last Updated   : $Date: 1998/06/13 10:59:40 $
  *
  * Description    : Schneider & Koch G16 Ethernet Device Driver for
  *                  Linux Kernel >= 1.1.22
@@ -19,7 +19,7 @@
  *
 -*/
 
-static const char *rcsid = "$Id: sk_g16.c,v 1.1 1994/06/30 16:25:15 root Exp $";
+static const char *rcsid = "$Id: sk_g16.c,v 1.2 1998/06/13 10:59:40 davem Exp $";
 
 /*
  * The Schneider & Koch (SK) G16 Network device driver is based

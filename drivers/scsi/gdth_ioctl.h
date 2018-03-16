@@ -2,7 +2,7 @@
 #define _GDTH_IOCTL_H
 
 /* gdth_ioctl.h
- * $Id: gdth_ioctl.h,v 1.1 1997/02/21 08:07:27 achim Exp $
+ * $Id: gdth_ioctl.h,v 1.1 1997/11/29 02:01:44 davem Exp $
  */
 
 /* IOCTLs */

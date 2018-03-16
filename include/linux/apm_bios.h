@@ -15,7 +15,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * $Id: apm_bios.h,v 0.9 1995/03/09 13:50:05 sfr Exp $
+ * $Id: apm_bios.h,v 1.1.1.1 1997/10/27 22:43:19 davem Exp $
  */
 
 typedef unsigned short	apm_event_t;

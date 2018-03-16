@@ -369,7 +369,7 @@ static struct sk_buff *ip_glue(struct ipq *qp)
 	memcpy(ptr, ((unsigned char *) qp->iph), qp->ihlen);
 	ptr += qp->ihlen;
 
-	count = 0;
+	count = qp->ihlen;
 
 	/* Copy the data portions of all fragments into the new buffer. */
 	fp = qp->fragments;
@@ -396,7 +396,7 @@ static struct sk_buff *ip_glue(struct ipq *qp)
 	/* Done with all fragments. Fixup the new IP header. */
 	iph = skb->h.iph;
 	iph->frag_off = 0;
-	iph->tot_len = htons((iph->ihl * 4) + count);
+	iph->tot_len = htons(count);
 	skb->ip_hdr = iph;
 
 	ip_statistics.IpReasmOKs++;

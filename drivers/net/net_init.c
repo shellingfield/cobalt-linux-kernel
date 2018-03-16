@@ -65,7 +65,8 @@
 
 /* The list of used and available "eth" slots (for "eth0", "eth1", etc.) */
 #define MAX_ETH_CARDS 16 /* same as the number if irq's in irq2dev[] */
-static struct device *ethdev_index[MAX_ETH_CARDS];
+/* COBALT LOCAL: We export this for eth address allocation hack.  -DaveM */
+struct device *ethdev_index[MAX_ETH_CARDS];
 
 
 /* Fill in the fields of the device structure with ethernet-generic values.

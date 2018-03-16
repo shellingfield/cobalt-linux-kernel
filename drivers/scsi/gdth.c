@@ -23,6 +23,9 @@
  * Tested with Linux 1.2.13, ..., 2.0.29                                *
  *                                                                      *
  * $Log: gdth.c,v $
+ * Revision 1.1  1997/11/29 02:01:44  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.8  1997/04/02 12:14:30  achim
  * Version 1.00 (see gdth.h), tested with kernel 2.0.29
  *
@@ -53,7 +56,7 @@
  * Initial revision
  *
  *
- * $Id: gdth.c,v 1.8 1997/04/02 12:14:30 achim Exp $ 
+ * $Id: gdth.c,v 1.1 1997/11/29 02:01:44 davem Exp $ 
  ************************************************************************/
 
 #ifdef MODULE

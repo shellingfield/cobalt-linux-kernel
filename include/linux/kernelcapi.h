@@ -1,11 +1,14 @@
 /*
- * $Id: kernelcapi.h,v 1.1 1997/03/04 21:27:33 calle Exp $
+ * $Id: kernelcapi.h,v 1.1 1997/11/29 02:01:59 davem Exp $
  * 
  * Kernel CAPI 2.0 Interface for Linux
  * 
  * (c) Copyright 1997 by Carsten Paeth (calle@calle.in-berlin.de)
  * 
  * $Log: kernelcapi.h,v $
+ * Revision 1.1  1997/11/29 02:01:59  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1997/03/04 21:27:33  calle
  * First version in isdn4linux
  *

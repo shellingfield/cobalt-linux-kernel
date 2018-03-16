@@ -1,11 +1,14 @@
 /*
- * $Id: b1lli.h,v 1.1 1997/03/04 21:27:32 calle Exp $
+ * $Id: b1lli.h,v 1.1 1997/11/29 02:01:59 davem Exp $
  *
  * ISDN lowlevel-module for AVM B1-card.
  *
  * Copyright 1996 by Carsten Paeth (calle@calle.in-berlin.de)
  *
  * $Log: b1lli.h,v $
+ * Revision 1.1  1997/11/29 02:01:59  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1997/03/04 21:27:32  calle
  * First version in isdn4linux
  *

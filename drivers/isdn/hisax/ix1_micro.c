@@ -1,4 +1,4 @@
-/* $Id: ix1_micro.c,v 1.3 1997/04/13 19:54:02 keil Exp $
+/* $Id: ix1_micro.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * ix1_micro.c  low level stuff for ITK ix1-micro Rev.2 isdn cards
  *              derived from the original file teles3.c from Karsten Keil
@@ -11,6 +11,9 @@
  *              Beat Doebeli
  *
  * $Log: ix1_micro.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.3  1997/04/13 19:54:02  keil
  * Change in IRQ check delay for SMP
  *
@@ -61,7 +64,7 @@
 #include <linux/kernel_stat.h>
 
 extern const char *CardType[];
-const char *ix1_revision = "$Revision: 1.3 $";
+const char *ix1_revision = "$Revision: 1.1 $";
 
 #define byteout(addr,val) outb_p(val,addr)
 #define bytein(addr) inb_p(addr)

@@ -1,4 +1,4 @@
-/* $Id: tpqic02.h,v 0.25 1994/07/21 02:16:30 root Exp root $
+/* $Id: tpqic02.h,v 1.1.1.1 1997/10/27 22:43:19 davem Exp $
  *
  * Include file for QIC-02 driver for Linux.
  *

@@ -17,10 +17,13 @@
 /* Renamed and updated to 1.3.x by Michael Griffith <grif@cs.ucr.edu> */
 
 /*
- * $Date: 1995/09/22 02:32:56 $
- * $Revision: 0.5 $
+ * $Date: 1997/10/27 22:43:48 $
+ * $Revision: 1.1.1.1 $
  *
- * $Log: isp1020.h,v $
+ * $Log: qlogicisp.h,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:48  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  * Revision 0.5  1995/09/22  02:32:56  root
  * do auto request sense
  *

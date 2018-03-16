@@ -1,4 +1,4 @@
-/* $Id: tei.c,v 1.8 1997/04/07 22:59:08 keil Exp $
+/* $Id: tei.c,v 1.1 1997/11/29 02:01:35 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
@@ -7,6 +7,9 @@
  *              Fritz Elfert
  *
  * $Log: tei.c,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.8  1997/04/07 22:59:08  keil
  * GFP_KERNEL --> GFP_ATOMIC
  *
@@ -40,7 +43,7 @@
 extern struct IsdnCard cards[];
 extern int nrcards;
 
-const char *tei_revision = "$Revision: 1.8 $";
+const char *tei_revision = "$Revision: 1.1 $";
 
 static struct PStack *
 findces(struct PStack *st, int ces)

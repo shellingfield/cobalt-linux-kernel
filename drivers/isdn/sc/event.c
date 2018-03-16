@@ -1,5 +1,5 @@
 /*
- *  $Id: event.c,v 1.3 1997/02/11 22:53:41 fritz Exp $
+ *  $Id: event.c,v 1.1 1997/11/29 02:01:31 davem Exp $
  *  Copyright (C) 1996  SpellCaster Telecommunications Inc.
  *
  *  This program is free software; you can redistribute it and/or modify

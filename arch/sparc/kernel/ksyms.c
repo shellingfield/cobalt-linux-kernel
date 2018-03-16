@@ -1,4 +1,4 @@
-/* $Id: ksyms.c,v 1.1 1996/02/25 06:30:18 davem Exp $
+/* $Id: ksyms.c,v 1.1.1.1 1997/10/27 22:44:02 davem Exp $
  * arch/sparc/kernel/ksyms.c: Sparc specific ksyms support.
  *
  * Copyright (C) 1996 David S. Miller (davem@caip.rutgers.edu)

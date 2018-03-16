@@ -12,6 +12,7 @@
 
 #include <asm/segment.h>
 
+#include <linux/config.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -338,8 +339,13 @@ int namei(const char *pathname, struct inode **res_inode)
  * which is a lot more logical, and also allows the "no perm" needed
  * for symlinks (where the permissions are checked later).
  */
+#ifdef CONFIG_BINFMT_IRIX
+int do_open_namei(const char * pathname, int flag, int mode,
+                  struct inode ** res_inode, struct inode * base)
+#else
 int open_namei(const char * pathname, int flag, int mode,
                struct inode ** res_inode, struct inode * base)
+#endif
 {
 	const char * basename;
 	int namelen,error;

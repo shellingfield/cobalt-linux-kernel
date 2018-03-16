@@ -1,4 +1,4 @@
-/* $Id: elsa.h,v 1.6 1997/03/23 21:45:48 keil Exp $
+/* $Id: elsa.h,v 1.1 1997/11/29 02:01:33 davem Exp $
  *
  * elsa.h   Header for Elsa ISDN cards
  *
@@ -8,6 +8,9 @@
  *
  *
  * $Log: elsa.h,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.6  1997/03/23 21:45:48  keil
  * Add support for ELSA PCMCIA
  *

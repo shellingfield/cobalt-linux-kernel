@@ -1,5 +1,5 @@
 #
-# $Id: Makefile,v 1.4 1997/03/30 17:10:40 calle Exp $
+# $Id: Makefile,v 1.1 1997/11/29 02:01:32 davem Exp $
 #
 # Makefile for the CAPI and AVM-B1 device drivers.
 #
@@ -11,6 +11,9 @@
 # parent makes..
 #
 # $Log: Makefile,v $
+# Revision 1.1  1997/11/29 02:01:32  davem
+# Merge to 2.0.32
+#
 # Revision 1.4  1997/03/30 17:10:40  calle
 # added support for AVM-B1-PCI card.
 #

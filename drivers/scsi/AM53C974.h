@@ -22,6 +22,9 @@
 
 /*
  * $Log: AM53C974.h,v $
+ * Revision 1.1.1.1  1997/10/27 22:43:47  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  */
 
 #ifndef AM53C974_H

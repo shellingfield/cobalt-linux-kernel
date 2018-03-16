@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.9 1996/03/23 01:37:15 davem Exp $
+# $Id: Makefile,v 1.1.1.1 1997/10/27 22:44:02 davem Exp $
 # Makefile for Sparc library files..
 #
 

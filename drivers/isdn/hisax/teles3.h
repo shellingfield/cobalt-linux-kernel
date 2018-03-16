@@ -1,4 +1,4 @@
-/* $Id: teles3.h,v 1.2 1997/01/21 22:27:14 keil Exp $
+/* $Id: teles3.h,v 1.1 1997/11/29 02:01:35 davem Exp $
  *
  * teles3.h   Header for Teles 16.3 PNP & compatible
  *
@@ -6,6 +6,9 @@
  *
  *
  * $Log: teles3.h,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.2  1997/01/21 22:27:14  keil
  * cleanups
  *

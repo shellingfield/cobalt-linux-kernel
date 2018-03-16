@@ -70,7 +70,13 @@
  */
  
 /*
- * $Log: generic_NCR5380.c,v $
+ * $Log: g_NCR5380.c,v $
+ * Revision 1.2  1997/11/29 02:01:49  davem
+ * Merge to 2.0.32
+ *
+ * Revision 1.1.1.1  1997/10/27 22:43:44  davem
+ * Vanilla 2.0.30 kernel tree.
+ *
  */
 
 #define AUTOPROBE_IRQ

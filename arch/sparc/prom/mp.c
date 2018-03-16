@@ -1,4 +1,4 @@
-/* $Id: mp.c,v 1.5 1996/04/04 16:31:06 tridge Exp $
+/* $Id: mp.c,v 1.1.1.1 1997/10/27 22:44:04 davem Exp $
  * mp.c:  OpenBoot Prom Multiprocessor support routines.  Don't call
  *        these on a UP or else you will halt and catch fire. ;)
  *

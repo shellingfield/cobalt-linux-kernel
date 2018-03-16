@@ -2,7 +2,7 @@ VERSION = 2
 PATCHLEVEL = 0
 SUBLEVEL = 34
 
-ARCH = i386
+ARCH = mips
 
 #
 # For SMP kernels, set this. We don't want to have this in the config file
@@ -26,8 +26,8 @@ TOPDIR	:= $(shell if [ "$$PWD" != "" ]; then echo $$PWD; else pwd; fi)
 HPATH   	= $(TOPDIR)/include
 FINDHPATH	= $(HPATH)/asm $(HPATH)/linux $(HPATH)/scsi $(HPATH)/net
 
-HOSTCC  	=gcc -I$(HPATH)
-HOSTCFLAGS	=-O2 -fomit-frame-pointer
+HOSTCC  	= gcc
+HOSTCFLAGS	= -O2 -fomit-frame-pointer
 
 CROSS_COMPILE 	=
 
@@ -316,7 +316,7 @@ clean:	archclean
 	rm -f core `find . -type f -name 'core' -print`
 	rm -f vmlinux System.map
 	rm -f .tmp* drivers/sound/configure
-	rm -fr modules/*
+	rm -f `find modules/ -type f -maxdepth 1 -print`
 	rm -f submenu*
 
 mrproper: clean
@@ -331,7 +331,7 @@ mrproper: clean
 	rm -f .depend `find . -name .depend -print`
 	rm -f .hdepend scripts/mkdep
 	rm -f $(TOPDIR)/include/linux/modversions.h
-	rm -f $(TOPDIR)/include/linux/modules/*
+	rm -f `find $(TOPDIR)/include/linux/modules -type f -maxdepth 1`
 
 
 distclean: mrproper

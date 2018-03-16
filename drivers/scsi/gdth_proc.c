@@ -1,5 +1,5 @@
 /* gdth_proc.c 
- * $Id: gdth_proc.c,v 1.4 1997/02/25 13:33:47 achim Exp $
+ * $Id: gdth_proc.c,v 1.1 1997/11/29 02:01:44 davem Exp $
  */
 
 #include "gdth_ioctl.h"

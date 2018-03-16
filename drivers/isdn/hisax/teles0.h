@@ -1,4 +1,4 @@
-/* $Id: teles0.h,v 1.2 1997/01/21 22:26:52 keil Exp $
+/* $Id: teles0.h,v 1.1 1997/11/29 02:01:35 davem Exp $
  *
  * teles0.h   Header for Teles 16.0 8.0 & compatible
  *
@@ -6,6 +6,9 @@
  *
  *
  * $Log: teles0.h,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.2  1997/01/21 22:26:52  keil
  * cleanups
  *

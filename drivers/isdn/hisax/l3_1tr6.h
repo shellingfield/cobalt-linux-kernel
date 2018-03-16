@@ -1,8 +1,11 @@
-/* $Id: l3_1tr6.h,v 1.1 1996/10/13 20:03:48 keil Exp $
+/* $Id: l3_1tr6.h,v 1.1 1997/11/29 02:01:34 davem Exp $
  *
  *  German 1TR6 D-channel protocol defines
  *
  * $Log: l3_1tr6.h,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.1  1996/10/13 20:03:48  keil
  * Initial revision
  *

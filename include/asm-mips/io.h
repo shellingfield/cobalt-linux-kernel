@@ -1,14 +1,23 @@
 #ifndef __ASM_MIPS_IO_H
 #define __ASM_MIPS_IO_H
 
+/*
+ * Slowdown I/O port space accesses for antique hardware.
+ */
+#undef CONF_SLOWDOWN_IO
+
+#include <linux/config.h>
+
 #include <asm/mipsconfig.h>
-#include <asm/segment.h>
+#include <asm/addrspace.h>
 
 /*
  * This file contains the definitions for the MIPS counterpart of the
  * x86 in/out instructions. This heap of macros and C results in much
- * better code than the approach of doing it in plain C, though that's
- * probably not needed.
+ * better code than the approach of doing it in plain C.  The macros
+ * result in code that is to fast for certain hardware.  On the other
+ * side the performance of the string functions should be improved for
+ * sake of certain devices like EIDE disks that do highspeed polled I/O.
  *
  *   Ralf
  *
@@ -25,6 +34,16 @@
  */
 
 /*
+ * On MIPS I/O ports are memory mapped, so we access them using normal
+ * load/store instructions. mips_io_port_base is the virtual address to
+ * which all ports are being mapped.  For sake of efficiency some code
+ * assumes that this is an address that can be loaded with a single lui
+ * instruction, so the lower 16 bits must be zero.  Should be true on
+ * on any sane architecture; generic code does not use this assumption.
+ */
+extern unsigned long mips_io_port_base;
+
+/*
  * Thanks to James van Artsdalen for a better timing-fix than
  * the two short jumps: using outb's to a nonexistent port seems
  * to guarantee better timings even on fast machines.
@@ -33,17 +52,22 @@
  * I feel a bit unsafe about using 0x80 (should be safe, though)
  *
  *		Linus
+ *
  */
 
 #define __SLOW_DOWN_IO \
 	__asm__ __volatile__( \
 		"sb\t$0,0x80(%0)" \
-		: : "r" (PORT_BASE));
+		: : "r" (mips_io_port_base));
 
+#ifdef CONF_SLOWDOWN_IO
 #ifdef REALLY_SLOW_IO
 #define SLOW_DOWN_IO { __SLOW_DOWN_IO; __SLOW_DOWN_IO; __SLOW_DOWN_IO; __SLOW_DOWN_IO; }
 #else
 #define SLOW_DOWN_IO __SLOW_DOWN_IO
+#endif
+#else
+#define SLOW_DOWN_IO
 #endif
 
 /*
@@ -52,44 +76,76 @@
  */
 extern inline unsigned long virt_to_phys(volatile void * address)
 {
-	return (unsigned long) address - KSEG0;
+	return PHYSADDR(address);
 }
 
 extern inline void * phys_to_virt(unsigned long address)
 {
-	return (void *) address + KSEG0;
+	return (void *)KSEG0ADDR(address);
 }
 
 /*
  * IO bus memory addresses are also 1:1 with the physical address
- * FIXME: This assumption is wrong for the Deskstation Tyne
  */
-#define virt_to_bus virt_to_phys
-#define bus_to_virt phys_to_virt
+extern inline unsigned long virt_to_bus(volatile void * address)
+{
+	return PHYSADDR(address);
+}
+
+extern inline void * bus_to_virt(unsigned long address)
+{
+	return (void *)KSEG0ADDR(address);
+}
 
 /*
- * readX/writeX() are used to access memory mapped devices. On some
- * architectures the memory mapped IO stuff needs to be accessed
- * differently. On the x86 architecture, we just read/write the
- * memory location directly.
+ * isa_slot_offset is the address where E(ISA) busaddress 0 is is mapped
+ * for the processor.
  */
-#define readb(addr) (*(volatile unsigned char *) (addr))
-#define readw(addr) (*(volatile unsigned short *) (addr))
-#define readl(addr) (*(volatile unsigned int *) (addr))
-
-#define writeb(b,addr) ((*(volatile unsigned char *) (addr)) = (b))
-#define writew(b,addr) ((*(volatile unsigned short *) (addr)) = (b))
-#define writel(b,addr) ((*(volatile unsigned int *) (addr)) = (b))
-
-#define memset_io(a,b,c)	memset((void *)(a),(b),(c))
-#define memcpy_fromio(a,b,c)	memcpy((a),(void *)(b),(c))
-#define memcpy_toio(a,b,c)	memcpy((void *)(a),(b),(c))
+extern unsigned long isa_slot_offset;
 
 /*
- * Again, MIPS does not require mem IO specific function.
+ * XXX We need system specific versions of these to handle EISA address bits
+ * 24-31 on SNI.
  */
+#ifdef CONFIG_COBALT_27
+/* Full virtual address is encoded in passed argument. */
+#define PCIMEM_BASE	0
+#else
+#define PCIMEM_BASE	isa_slot_offset
+#endif
+#define readb(addr) (*(volatile unsigned char *) (PCIMEM_BASE + (unsigned long)(addr)))
+#define readw(addr) (*(volatile unsigned short *) (PCIMEM_BASE + (unsigned long)(addr)))
+#define readl(addr) (*(volatile unsigned int *) (PCIMEM_BASE + (unsigned long)(addr)))
 
-#define eth_io_copy_and_sum(a,b,c,d)	eth_copy_and_sum((a),(void *)(b),(c),(d))
+#define writeb(b,addr) (*(volatile unsigned char *) (PCIMEM_BASE + (unsigned long)(addr)) = (b))
+#define writew(b,addr) (*(volatile unsigned short *) (PCIMEM_BASE + (unsigned long)(addr)) = (b))
+#define writel(b,addr) (*(volatile unsigned int *) (PCIMEM_BASE + (unsigned long)(addr)) = (b))
+
+#define memset_io(a,b,c)	memset((void *)(PCIMEM_BASE + (unsigned long)a),(b),(c))
+#define memcpy_fromio(a,b,c)	memcpy((a),(void *)(PCIMEM_BASE + (unsigned long)(b)),(c))
+#define memcpy_toio(a,b,c)	memcpy((void *)(PCIMEM_BASE + (unsigned long)(a)),(b),(c))
+
+/*
+ * We don't have csum_partial_copy_fromio() yet, so we cheat here and
+ * just copy it. The net code will then do the checksum later.
+ */
+#define eth_io_copy_and_sum(skb,src,len,unused)	memcpy_fromio((skb)->data,(src),(len))
+
+static inline int check_signature(unsigned long io_addr,
+                                  const unsigned char *signature, int length)
+{
+	int retval = 0;
+	do {
+		if (readb(io_addr) != *signature)
+			goto out;
+		io_addr++;
+		signature++;
+		length--;
+	} while (length);
+	retval = 1;
+out:
+	return retval;
+}
 
 /*
  * Talk about misusing macros..
@@ -102,36 +158,37 @@ extern inline void __out##s(unsigned int value, unsigned int port) {
 __asm__ __volatile__ ("s" #m "\t%0,%1(%2)"
 
 #define __OUT(m,s) \
-__OUT1(s) __OUT2(m) : : "r" (value), "i" (0), "r" (PORT_BASE+port)); } \
-__OUT1(s##c) __OUT2(m) : : "r" (value), "ir" (port), "r" (PORT_BASE)); } \
-__OUT1(s##_p) __OUT2(m) : : "r" (value), "i" (0), "r" (PORT_BASE+port)); \
+__OUT1(s) __OUT2(m) : : "r" (value), "i" (0), "r" (mips_io_port_base+port)); } \
+__OUT1(s##c) __OUT2(m) : : "r" (value), "ir" (port), "r" (mips_io_port_base)); } \
+__OUT1(s##_p) __OUT2(m) : : "r" (value), "i" (0), "r" (mips_io_port_base+port)); \
 	SLOW_DOWN_IO; } \
-__OUT1(s##c_p) __OUT2(m) : : "r" (value), "ir" (port), "r" (PORT_BASE)); \
+__OUT1(s##c_p) __OUT2(m) : : "r" (value), "ir" (port), "r" (mips_io_port_base)); \
 	SLOW_DOWN_IO; }
 
 #define __IN1(t,s) \
 extern __inline__ t __in##s(unsigned int port) { t _v;
 
 /*
- * Useless nops will be removed by the assembler
+ * Required nops will be inserted by the assembler
  */
 #define __IN2(m) \
-__asm__ __volatile__ ("l" #m "u\t%0,%1(%2)\n\tnop"
+__asm__ __volatile__ ("l" #m "\t%0,%1(%2)"
 
 #define __IN(t,m,s) \
-__IN1(t,s) __IN2(m) : "=r" (_v) : "i" (0), "r" (PORT_BASE+port)); return _v; } \
-__IN1(t,s##c) __IN2(m) : "=r" (_v) : "ir" (port), "r" (PORT_BASE)); return _v; } \
-__IN1(t,s##_p) __IN2(m) : "=r" (_v) : "i" (0), "r" (PORT_BASE+port)); SLOW_DOWN_IO; return _v; } \
-__IN1(t,s##c_p) __IN2(m) : "=r" (_v) : "ir" (port), "r" (PORT_BASE)); SLOW_DOWN_IO; return _v; }
+__IN1(t,s) __IN2(m) : "=r" (_v) : "i" (0), "r" (mips_io_port_base+port)); return _v; } \
+__IN1(t,s##c) __IN2(m) : "=r" (_v) : "ir" (port), "r" (mips_io_port_base)); return _v; } \
+__IN1(t,s##_p) __IN2(m) : "=r" (_v) : "i" (0), "r" (mips_io_port_base+port)); SLOW_DOWN_IO; return _v; } \
+__IN1(t,s##c_p) __IN2(m) : "=r" (_v) : "ir" (port), "r" (mips_io_port_base)); SLOW_DOWN_IO; return _v; }
 
 #define __INS1(s) \
 extern inline void __ins##s(unsigned int port, void * addr, unsigned long count) {
 
 #define __INS2(m) \
+if (count) \
 __asm__ __volatile__ ( \
 	".set\tnoreorder\n\t" \
 	".set\tnoat\n" \
-	"1:\tl" #m "u\t$1,%4(%5)\n\t" \
+	"1:\tl" #m "\t$1,%4(%5)\n\t" \
 	"subu\t%1,1\n\t" \
 	"s" #m "\t$1,(%0)\n\t" \
 	"bne\t$0,%1,1b\n\t" \
@@ -142,36 +199,37 @@ __asm__ __volatile__ ( \
 #define __INS(m,s,i) \
 __INS1(s) __INS2(m) \
 	: "=r" (addr), "=r" (count) \
-	: "0" (addr), "1" (count), "i" (0), "r" (PORT_BASE+port), "I" (i) \
+	: "0" (addr), "1" (count), "i" (0), "r" (mips_io_port_base+port), "I" (i) \
 	: "$1");} \
 __INS1(s##c) __INS2(m) \
 	: "=r" (addr), "=r" (count) \
-	: "0" (addr), "1" (count), "ir" (port), "r" (PORT_BASE), "I" (i) \
+	: "0" (addr), "1" (count), "ir" (port), "r" (mips_io_port_base), "I" (i) \
 	: "$1");}
 
 #define __OUTS1(s) \
 extern inline void __outs##s(unsigned int port, const void * addr, unsigned long count) {
 
 #define __OUTS2(m) \
+if (count) \
 __asm__ __volatile__ ( \
         ".set\tnoreorder\n\t" \
         ".set\tnoat\n" \
-        "1:\tl" #m "u\t$1,(%0)\n\t" \
-        "subu\t%1,%1,1\n\t" \
+        "1:\tl" #m "\t$1,(%0)\n\t" \
+        "subu\t%1,1\n\t" \
         "s" #m "\t$1,%4(%5)\n\t" \
         "bne\t$0,%1,1b\n\t" \
-        "addiu\t%0,%0,%6\n\t" \
+        "addiu\t%0,%6\n\t" \
         ".set\tat\n\t" \
         ".set\treorder"
 
 #define __OUTS(m,s,i) \
 __OUTS1(s) __OUTS2(m) \
 	: "=r" (addr), "=r" (count) \
-	: "0" (addr), "1" (count), "i" (0), "r" (PORT_BASE+port), "I" (i) \
+	: "0" (addr), "1" (count), "i" (0), "r" (mips_io_port_base+port), "I" (i) \
 	: "$1");} \
 __OUTS1(s##c) __OUTS2(m) \
 	: "=r" (addr), "=r" (count) \
-	: "0" (addr), "1" (count), "ir" (port), "r" (PORT_BASE), "I" (i) \
+	: "0" (addr), "1" (count), "ir" (port), "r" (mips_io_port_base), "I" (i) \
 	: "$1");}
 
 __IN(unsigned char,b,b)
@@ -192,7 +250,7 @@ __OUTS(w,l,4)
 
 /*
  * Note that due to the way __builtin_constant_p() works, you
- *  - can't use it inside a inline function (it will never be true)
+ *  - can't use it inside an inline function (it will never be true)
  *  - you don't have to worry about side effects within the __builtin..
  */
 #define outb(val,port) \

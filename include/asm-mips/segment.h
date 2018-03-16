@@ -96,15 +96,15 @@ static inline unsigned long __get_user(const void * y, int size)
 	return result;
 }
 
-#define get_fs_byte(addr) get_user((unsigned char *)(addr))
-#define get_fs_word(addr) get_user((unsigned short *)(addr))
-#define get_fs_long(addr) get_user((unsigned int *)(addr))
-#define get_fs_quad(addr) get_user((unsigned long *)(addr))
+#define get_fs_byte(addr) __get_user((const unsigned char *)(addr),1)
+#define get_fs_word(addr) __get_user((const unsigned short *)(addr),2)
+#define get_fs_long(addr) __get_user((const unsigned int *)(addr),4)
+#define get_fs_quad(addr) __get_user((const unsigned long long *)(addr),8)
 
-#define put_fs_byte(x,addr) put_user((x),(char *)(addr))
-#define put_fs_word(x,addr) put_user((x),(short *)(addr))
-#define put_fs_long(x,addr) put_user((x),(int *)(addr))
-#define put_fs_quad(x,addr) put_user((x),(long *)(addr))
+#define put_fs_byte(x,addr) __put_user((x),(unsigned char *)(addr),1)
+#define put_fs_word(x,addr) __put_user((x),(unsigned short *)(addr),2)
+#define put_fs_long(x,addr) __put_user((x),(unsigned int *)(addr),4)
+#define put_fs_quad(x,addr) __put_user((x),(unsigned long long *)(addr),8)
 
 static inline void memcpy_fromfs(void * to, const void * from, unsigned long n)
 {
@@ -130,9 +130,11 @@ static inline void memcpy_tofs(void * to, const void * from, unsigned long n)
 #define KERNEL_DS 0
 #define USER_DS 1
 
+extern int active_ds;
+
 static inline unsigned long get_fs(void)
 {
-	return USER_DS;
+	return active_ds;
 }
 
 static inline unsigned long get_ds(void)
@@ -142,47 +144,9 @@ static inline unsigned long get_ds(void)
 
 static inline void set_fs(unsigned long val)
 {
+	active_ds = val;
 }
 
 #endif /* !__LANGUAGE_ASSEMBLY__ */
-
-/*
- * Memory segments (32bit kernel mode addresses)
- */
-#define KUSEG                   0x00000000
-#define KSEG0                   0x80000000
-#define KSEG1                   0xa0000000
-#define KSEG2                   0xc0000000
-#define KSEG3                   0xe0000000
-
-/*
- * Returns the kernel segment base of a given address
- */
-#define KSEGX(a)                (((unsigned long)(a)) & 0xe0000000)
-
-/*
- * Returns the physical address of a KSEG0/KSEG1 address
- */
-#define PHYSADDR(a)		(((unsigned long)(a)) & 0x1fffffff)
-
-/*
- * Map an address to a certain kernel segment
- */
-#define KSEG0ADDR(a)		((((unsigned long)(a)) & 0x1fffffff) | KSEG0)
-#define KSEG1ADDR(a)		((((unsigned long)(a)) & 0x1fffffff) | KSEG1)
-#define KSEG2ADDR(a)		((((unsigned long)(a)) & 0x1fffffff) | KSEG2)
-#define KSEG3ADDR(a)		((((unsigned long)(a)) & 0x1fffffff) | KSEG3)
-
-/*
- * Memory segments (64bit kernel mode addresses)
- */
-#define XKUSEG                  0x0000 0000 0000 0000
-#define XKSSEG                  0x4000 0000 0000 0000
-#define XKPHYS                  0x8000 0000 0000 0000
-#define XKSEG                   0xc000 0000 0000 0000
-#define CKSEG0                  0xffff ffff 8000 0000
-#define CKSEG1                  0xffff ffff a000 0000
-#define CKSSEG                  0xffff ffff c000 0000
-#define CKSEG3                  0xffff ffff e000 0000
 
 #endif /* __ASM_MIPS_SEGMENT_H */

@@ -1,4 +1,4 @@
-/* $Id: teles3.c,v 1.11 1997/04/13 19:54:05 keil Exp $
+/* $Id: teles3.c,v 1.1 1997/11/29 02:01:35 davem Exp $
 
  * teles3.c     low level stuff for Teles 16.3 & PNP isdn cards
  *
@@ -11,6 +11,9 @@
  *              Beat Doebeli
  *
  * $Log: teles3.c,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.11  1997/04/13 19:54:05  keil
  * Change in IRQ check delay for SMP
  *
@@ -61,7 +64,7 @@
 #include <linux/kernel_stat.h>
 
 extern const char *CardType[];
-const char *teles3_revision = "$Revision: 1.11 $";
+const char *teles3_revision = "$Revision: 1.1 $";
 
 #define byteout(addr,val) outb_p(val,addr)
 #define bytein(addr) inb_p(addr)

@@ -1,4 +1,4 @@
-/* $Id: isdn_net.h,v 1.5 1997/02/10 20:12:47 fritz Exp $
+/* $Id: isdn_net.h,v 1.2 1997/11/29 02:01:37 davem Exp $
 
  * header for Linux ISDN subsystem, network related functions (linklevel).
  *
@@ -21,6 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_net.h,v $
+ * Revision 1.2  1997/11/29 02:01:37  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.5  1997/02/10 20:12:47  fritz
  * Changed interface for reporting incoming calls.
  *

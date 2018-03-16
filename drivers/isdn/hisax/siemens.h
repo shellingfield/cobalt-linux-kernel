@@ -1,4 +1,4 @@
-/* $Id: siemens.h,v 1.4 1997/01/21 22:24:33 keil Exp $
+/* $Id: siemens.h,v 1.1 1997/11/29 02:01:35 davem Exp $
  *
  * siemens.h   ISAC and HSCX spezific Macros
  *
@@ -6,6 +6,9 @@
  *
  *
  * $Log: siemens.h,v $
+ * Revision 1.1  1997/11/29 02:01:35  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.4  1997/01/21 22:24:33  keil
  * cleanups
  *

@@ -1,4 +1,4 @@
-/* $Id: segment.c,v 1.2 1995/11/25 01:00:14 davem Exp $
+/* $Id: segment.c,v 1.1.1.1 1997/10/27 22:44:04 davem Exp $
  * segment.c:  Prom routine to map segments in other contexts before
  *             a standalone is completely mapped.  This is for sun4 and
  *             sun4c architectures only.

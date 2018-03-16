@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/fdc-isr.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/fdc-isr.h,v $
+ $Author: davem $
  *
- $Revision: 1.8 $
- $Date: 1995/04/22 07:30:15 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:41 $
+ $State: Exp $
  *
  *      This file contains the low level functions
  *      that communicate with the floppy disk controller,

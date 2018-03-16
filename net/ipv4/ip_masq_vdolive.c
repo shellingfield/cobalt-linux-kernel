@@ -2,7 +2,7 @@
  *		IP_MASQ_VDOLIVE  - VDO Live masquerading module
  *
  *
- * Version:	@(#)$Id: ip_masq_vdolive.c,v 1.1.2.1 1997/03/04 12:04:47 davem Exp $
+ * Version:	@(#)$Id: ip_masq_vdolive.c,v 1.2 1998/04/24 18:33:46 davem Exp $
  *
  * Author:	Nigel Metheringham <Nigel.Metheringham@ThePLAnet.net>
  *		PLAnet Online Ltd
@@ -46,7 +46,7 @@ struct vdolive_priv_data {
  * List of ports (up to MAX_MASQ_APP_PORTS) to be handled by helper
  * First port is set to the default port.
  */
-int ports[MAX_MASQ_APP_PORTS] = {7000}; /* I rely on the trailing items being set to zero */
+static int ports[MAX_MASQ_APP_PORTS] = {7000}; /* I rely on the trailing items being set to zero */
 struct ip_masq_app *masq_incarnations[MAX_MASQ_APP_PORTS];
 
 static int

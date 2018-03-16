@@ -1,18 +1,19 @@
-/* $Id: dma.h,v 1.7 1992/12/14 00:29:34 root Exp root $
+/* $Id: dma.h,v 1.3 1998/04/28 10:31:40 davem Exp $
  * linux/include/asm/dma.h: Defines for using and allocating dma channels.
  * Written by Hennus Bergman, 1992.
  * High DMA channel support & info by Hannu Savolainen
  * and John Boyd, Nov. 1992.
  *
  * NOTE: all this is true *only* for ISA/EISA expansions on Mips boards
- * and can only be used for expansion cards. Onboard DMA controller, such
+ * and can only be used for expansion cards. Onboard DMA controllers, such
  * as the R4030 on Jazz boards behave totally different!
  */
 
 #ifndef __ASM_MIPS_DMA_H
 #define __ASM_MIPS_DMA_H
 
-#include <asm/io.h>		/* need byte IO */
+#include <linux/config.h>
+#include <asm/io.h>			/* need byte IO */
 
 
 #ifdef HAVE_REALLY_SLOW_DMA_CONTROLLER
@@ -74,12 +75,20 @@
 #define MAX_DMA_CHANNELS	8
 
 /*
- * The maximum address that we can perform a DMA transfer to on this platform
- * This describes only the PC style part of the DMA logic like on Deskstations
- * or Acer PICA but not the much more versatile DMA logic used for the
- * local devices on Acer PICA or Magnums.
+ * The maximum address in KSEG0 that we can perform a DMA transfer to on this
+ * platform.  This describes only the PC style part of the DMA logic like on
+ * Deskstations or Acer PICA but not the much more versatile DMA logic used
+ * for the local devices on Acer PICA or Magnums.
  */
-#define MAX_DMA_ADDRESS		0x1000000
+#ifdef CONFIG_SGI
+#define MAX_DMA_ADDRESS		(~0UL)
+#else
+#ifdef CONFIG_COBALT_27
+#define MAX_DMA_ADDRESS		(PAGE_OFFSET + 0x04000000)
+#else
+#define MAX_DMA_ADDRESS		(PAGE_OFFSET + 0x01000000)
+#endif
+#endif
 
 /* 8237 DMA controllers */
 #define IO_DMA1_BASE	0x00	/* 8 bit slave DMA, channels 0..3 */
@@ -275,10 +284,5 @@ static __inline__ int get_dma_residue(unsigned int dmanr)
 /* These are in kernel/dma.c: */
 extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 extern void free_dma(unsigned int dmanr);	/* release it again */
-
-/*
- * DMA memory allocation - formerly in include/linux/mm.h
- */
-#define __get_dma_pages(priority, order) __get_free_pages((priority),(order), 1)
 
 #endif /* __ASM_MIPS_DMA_H */

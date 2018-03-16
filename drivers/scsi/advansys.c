@@ -1,4 +1,4 @@
-/* $Id: advansys.c,v 1.49 1998/01/22 20:19:25 bobf Exp bobf $ */
+/* $Id: advansys.c,v 1.3 1998/06/16 05:09:06 davem Exp $ */
 #define ASC_VERSION "3.1D"    /* AdvanSys Driver Version */
 
 /*
@@ -644,6 +644,7 @@
 #include <linux/module.h>
 #endif /* MODULE */
 #endif /* version >= v1.3.0 */
+#include <linux/config.h>
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -662,6 +663,10 @@
 #include <asm/io.h>
 #include <asm/system.h>
 #include <asm/dma.h>
+#ifdef CONFIG_COBALT_27
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#endif
 #if LINUX_VERSION_CODE < ASC_LINUX_VERSION(1,3,0)
 #include "../block/blk.h"
 #else /* version >= v1.3.0 */
@@ -673,6 +678,16 @@
 #include "sd.h"
 #include "advansys.h"
 
+#ifdef CONFIG_COBALT_27
+/* COBALT LOCAL: Needed because our mips is not DMA coherent. -DaveM */
+#define CACHED_TO_UNCACHED(x)         (((unsigned long)(x) & (unsigned long)0x1fffffff) + KSEG1)
+extern int pcibios_read_config_byte (unsigned char bus, unsigned char dev_fn,
+				     unsigned char where, unsigned char *val);
+extern int pcibios_read_config_word (unsigned char bus, unsigned char dev_fn,
+				     unsigned char where, unsigned short *val);
+extern int pcibios_write_config_byte (unsigned char bus, unsigned char dev_fn,
+				      unsigned char where, unsigned char val);
+#endif /* CONFIG_COBALT_27 */
 /*
  * If Linux eventually defines a DID_UNDERRUN, the constant here can be
  * removed. The current value of zero for DID_UNDERRUN results in underrun
@@ -805,7 +820,11 @@ typedef unsigned char uchar;
 #define  ASC_DVCLIB_CALL_FAILED   (0)
 #define  ASC_DVCLIB_CALL_ERROR    (-1)
 
+#ifdef CONFIG_COBALT_27
+#define PortAddr            unsigned int      /* port address size  */
+#else
 #define PortAddr            unsigned short    /* port address size  */
+#endif
 #define Ptr2Func            ulong
 #define inp(port)           inb(port)
 #define inpw(port)          inw(port)
@@ -3353,7 +3372,11 @@ typedef Scsi_Cmnd            REQ, *REQP;
 
 #define PCI_MAX_SLOT            0x1F
 #define PCI_MAX_BUS             0xFF
+#ifdef CONFIG_COBALT_27
+#define PCI_IOADDRESS_MASK		0xFFFFFFFE
+#else
 #define PCI_IOADDRESS_MASK      0xFFFE
+#endif
 #define ASC_PCI_VENDORID        0x10CD
 #define ASC_PCI_DEVICE_ID_1100  0x1100
 #define ASC_PCI_DEVICE_ID_1200  0x1200
@@ -4236,6 +4259,7 @@ advansys_detect(Scsi_Host_Template *tpnt)
             switch (asc_bus[bus]) {
             case ASC_IS_ISA:
             case ASC_IS_VL:
+#ifndef CONFIG_COBALT_27
                 if (asc_iopflag == ASC_FALSE) {
                     iop = AscSearchIOPortAddr(iop, asc_bus[bus]);
                 } else {
@@ -4295,10 +4319,13 @@ advansys_detect(Scsi_Host_Template *tpnt)
                         asc_ioport[ioport++] = 0;
                     }
                 }
+#endif /* CONFIG_COBALT_27 */
                 break;
 
             case ASC_IS_EISA:
+#ifndef CONFIG_COBALT_27
                 iop = AscSearchIOPortAddr(iop, asc_bus[bus]);
+#endif
                 break;
 
             case ASC_IS_PCI:
@@ -4875,6 +4902,11 @@ advansys_detect(Scsi_Host_Template *tpnt)
 
             /* Register IRQ Number. */
             ASC_DBG1(2, "advansys_detect: request_irq() %d\n", shp->irq);
+#ifdef CONFIG_COBALT_27
+	    /* COBALT LOCAL: SA_SHIRQ not supported in our kernels.  -DaveM */
+	    if ((ret = request_irq(shp->irq, advansys_interrupt, SA_INTERRUPT,
+				   "advansys", boardp)) != 0)
+#else
 #if LINUX_VERSION_CODE < ASC_LINUX_VERSION(1,3,70)
             if ((ret = request_irq(shp->irq, advansys_interrupt,
                             SA_INTERRUPT, "advansys")) != 0)
@@ -4883,6 +4915,7 @@ advansys_detect(Scsi_Host_Template *tpnt)
                             SA_INTERRUPT | (share_irq == TRUE ? SA_SHIRQ : 0),
                             "advansys", boardp)) != 0)
 #endif /* version >= v1.3.70 */
+#endif /* CONFIG_COBALT_27 */
             {
                 ASC_PRINT2(
 "advansys_detect: board %d: request_irq() failed %d\n",
@@ -6551,6 +6584,10 @@ asc_build_req(asc_board_t *boardp, Scsi_Cmnd *scp)
 #if LINUX_VERSION_CODE < ASC_LINUX_VERSION(2,0,0)
     asc_scsi_q.q1.sense_addr = (ulong) &scp->sense_buffer[0];
 #else /* version >= v2.0.0 */
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: Again, we're not DMA coherent so... */
+	flush_cache_pre_dma_out((ulong)&scp->sense_buffer[0], 16);
+#endif
     asc_scsi_q.q1.sense_addr = virt_to_bus(&scp->sense_buffer[0]);
 #endif /* version >= v2.0.0 */
     asc_scsi_q.q1.sense_len = sizeof(scp->sense_buffer);
@@ -6588,6 +6625,12 @@ asc_build_req(asc_board_t *boardp, Scsi_Cmnd *scp)
         asc_scsi_q.q1.data_addr = virt_to_bus(scp->request_buffer);
 #endif /* version >= v2.0.0 */
         asc_scsi_q.q1.data_cnt = scp->request_bufflen;
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: We're not DMA coherent, push data to memory
+	 *               so the device can see it.  -DaveM
+	 */
+	flush_cache_pre_dma_out((ulong)scp->request_buffer, scp->request_bufflen);
+#endif
         ASC_STATS_ADD(scp->host, cont_xfer,
                       ASC_CEILING(scp->request_bufflen, 512));
         asc_scsi_q.q1.sg_queue_cnt = 0;
@@ -6634,6 +6677,12 @@ asc_build_req(asc_board_t *boardp, Scsi_Cmnd *scp)
             asc_sg_head.sg_list[sgcnt].addr = virt_to_bus(slp->address);
 #endif /* version >= v2.0.0 */
             asc_sg_head.sg_list[sgcnt].bytes = slp->length;
+#ifdef CONFIG_COBALT_27
+	    /* COBALT LOCAL: We're not DMA coherent, push data to memory
+	     *               so the device can see it.  -DaveM
+	     */
+	    flush_cache_pre_dma_out((ulong)slp->address, slp->length);
+#endif
             ASC_STATS_ADD(scp->host, sg_xfer, ASC_CEILING(slp->length, 512));
         }
     }
@@ -7528,6 +7577,15 @@ STATIC ushort
 asc_get_cfg_word(PCI_DATA *pciData)
 )
 {
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: Driver authors not using the standard pcibios_*() interfaces
+	 *               should be rung up and shot.  -DaveM
+	 */
+	ushort ret;
+	pcibios_read_config_word(pciData->bus, (pciData->func&0x07)|(pciData->slot<<3),
+				 pciData->offset, &ret);
+	return ret;
+#else /* !CONFIG_COBALT_27 */
     ushort   tmp;
     ulong    address;
     ulong    lbus = pciData->bus;
@@ -7599,6 +7657,7 @@ asc_get_cfg_word(PCI_DATA *pciData)
     }
     ASC_DBG1(4, "asc_get_cfg_word: config data: %x\n", tmp);
     return tmp;
+#endif /* CONFIG_COBALT_27 */
 }
 
 /*
@@ -7611,6 +7670,15 @@ STATIC uchar
 asc_get_cfg_byte(PCI_DATA *pciData)
 )
 {
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: Driver authors not using the standard pcibios_*() interfaces
+	 *               should be rung up and shot.  -DaveM
+	 */
+	uchar ret;
+	pcibios_read_config_byte(pciData->bus, (pciData->func&0x07)|(pciData->slot<<3),
+				 pciData->offset, &ret);
+	return ret;
+#else /* !CONFIG_COBALT_27 */
     uchar tmp;
     ulong address;
     ulong lbus = pciData->bus, lslot = pciData->slot, lfunc = pciData->func;
@@ -7681,6 +7749,7 @@ asc_get_cfg_byte(PCI_DATA *pciData)
     }
     ASC_DBG1(4, "asc_get_cfg_byte: config data: %x\n", tmp);
     return tmp;
+#endif /* CONFIG_COBALT_27 */
 }
 
 /*
@@ -7691,6 +7760,14 @@ STATIC void
 asc_put_cfg_byte(PCI_DATA *pciData, uchar byte_data)
 )
 {
+#ifdef CONFIG_COBALT_27
+	/* COBALT LOCAL: Driver authors not using the standard pcibios_*() interfaces
+	 *               should be rung up and shot.  -DaveM
+	 */
+	pcibios_write_config_byte(pciData->bus, (pciData->func&0x07)|(pciData->slot<<3),
+				  pciData->offset, byte_data);
+	return;
+#else /* !CONFIG_COBALT_27 */
     ulong tmpl;
     ulong address;
     ulong lbus = pciData->bus, lslot = pciData->slot, lfunc = pciData->func;
@@ -7766,6 +7843,7 @@ asc_put_cfg_byte(PCI_DATA *pciData, uchar byte_data)
         outpl(0xCFC, t1CFC);
     }
     ASC_DBG(4, "asc_put_cfg_byte: end\n");
+#endif /* CONFIG_COBALT_27 */
 }
 
 /*
@@ -9151,6 +9229,12 @@ DvcGetSGList(ASC_DVC_VAR *asc_dvc_sg, uchar *buf_addr, ulong buf_len,
     asc_sg_head_ptr->sg_list[0].addr = virt_to_bus(buf_addr);
 #endif /* version >= v2.0.0 */
     asc_sg_head_ptr->sg_list[0].bytes = buf_size;
+#ifdef CONFIG_COBALT_27
+    /* COBALT LOCAL: We're not DMA coherent, push data to memory
+     *               so the device can see it.  -DaveM
+     */
+    flush_cache_pre_dma_out((ulong)buf_addr, buf_size);
+#endif
     return buf_size;
 }
 
@@ -9205,7 +9289,7 @@ DvcGetQinfo(PortAddr iop_base, ushort s_addr, ushort *inbuf, int words)
 }
 
 /*
- * void    DvcOutPortWords(ushort iop_base, ushort &outbuf, int words)
+ * void    DvcOutPortWords(PortAddr iop_base, ushort &outbuf, int words)
  *
  * Calling/Exit State:
  *    none
@@ -9214,7 +9298,7 @@ DvcGetQinfo(PortAddr iop_base, ushort s_addr, ushort *inbuf, int words)
  *     output a buffer to an i/o port address
  */
 STATIC void
-DvcOutPortWords(ushort iop_base, ushort *outbuf, int words)
+DvcOutPortWords(PortAddr iop_base, ushort *outbuf, int words)
 {
     int    i;
 
@@ -9223,7 +9307,7 @@ DvcOutPortWords(ushort iop_base, ushort *outbuf, int words)
 }
 
 /*
- * void    DvcInPortWords(ushort iop_base, ushort &outbuf, int words)
+ * void	DvcInPortWords(PortAddr iop_base, ushort &outbuf, int words)
  *
  * Calling/Exit State:
  *    none
@@ -9232,7 +9316,7 @@ DvcOutPortWords(ushort iop_base, ushort *outbuf, int words)
  *     input a buffer from an i/o port address
  */
 STATIC void
-DvcInPortWords(ushort iop_base, ushort *inbuf, int words)
+DvcInPortWords(PortAddr iop_base, ushort *inbuf, int words)
 {
     int    i;
 

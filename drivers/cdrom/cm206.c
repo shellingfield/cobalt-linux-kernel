@@ -98,7 +98,7 @@ History:
  * - Philips/LMS cm260 product specification
  *
  *                       David van Leeuwen, david@tm.tno.nl.  */
-#define VERSION "$Id: cm206.c,v 0.99.1.1 1996/08/11 10:35:01 david Exp $"
+#define VERSION "$Id: cm206.c,v 1.1.1.1 1997/10/27 22:43:53 davem Exp $"
 
 #include <linux/module.h>	
 

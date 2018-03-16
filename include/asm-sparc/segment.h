@@ -1,4 +1,4 @@
-/* $Id: segment.h,v 1.10 1996/03/08 01:19:38 miguel Exp $ */
+/* $Id: segment.h,v 1.1.1.1 1997/10/27 22:43:25 davem Exp $ */
 #ifndef _ASM_SEGMENT_H
 #define _ASM_SEGMENT_H
 

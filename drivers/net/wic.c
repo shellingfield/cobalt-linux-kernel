@@ -1,4 +1,4 @@
-/* $Id: wic.c,v 1.3.2.1 1997/03/09 02:14:40 davem Exp $ */
+/* $Id: wic.c,v 1.1.1.1 1997/10/27 22:43:35 davem Exp $ */
 /* WIC: A parallel port "network" driver for Linux. */
 /* based on the plip network driver */
 /* Modified for Linux 1.3.x by Alan Cox <Alan.Cox@linux.org> */

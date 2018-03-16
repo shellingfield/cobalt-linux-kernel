@@ -1,4 +1,4 @@
-/* $Id: bare.h,v 1.2 1995/11/25 00:57:41 davem Exp $
+/* $Id: bare.h,v 1.1.1.1 1997/10/27 22:44:01 davem Exp $
  * bare.h:  Defines for the low level entry code of the BOOT program.
  *          We include in the head.h stuff that the real kernel uses
  *          and this saves a lot of repetition here.

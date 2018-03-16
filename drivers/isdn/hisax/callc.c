@@ -1,4 +1,4 @@
-/* $Id: callc.c,v 1.30 1997/05/29 10:40:43 keil Exp $
+/* $Id: callc.c,v 1.1 1997/11/29 02:01:33 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
@@ -7,6 +7,9 @@
  *              Fritz Elfert
  *
  * $Log: callc.c,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.30  1997/05/29 10:40:43  keil
  * chanp->impair was uninitialised
  *
@@ -112,7 +115,7 @@ extern long mod_use_count_;
 #endif
 #endif				/* MODULE */
 
-const char *l4_revision = "$Revision: 1.30 $";
+const char *l4_revision = "$Revision: 1.1 $";
 
 extern struct IsdnCard cards[];
 extern int nrcards;

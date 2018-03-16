@@ -15,12 +15,12 @@
  along with this program; see the file COPYING.  If not, write to
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
- $Source: /home/bas/distr/ftape-2.03b/RCS/ftape-bsm.c,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/ftape-bsm.c,v $
+ $Author: davem $
  *
- $Revision: 1.7 $
- $Date: 1995/04/30 13:15:14 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:41 $
+ $State: Exp $
  *
  *      This file contains the bad-sector map handling code for
  *      the QIC-117 floppy tape driver for Linux.

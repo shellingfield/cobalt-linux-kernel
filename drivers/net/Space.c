@@ -136,6 +136,15 @@ ethif_probe(struct device *dev)
 #ifdef CONFIG_YELLOWFIN
 	&& yellowfin_probe(dev)
 #endif
+#if defined(CONFIG_COBALT_TULIP) || defined(CONFIG_COBALT_TULIP_RAQ)
+	&& tulip_probe(dev)
+#endif
+#if defined(CONFIG_COBALT_3COM)
+	&& tc59x_probe(dev)
+#endif
+#if defined(CONFIG_COBALT_E100)
+	&& eepro100_probe(dev)
+#endif
 	/* Next mostly-safe EISA-only drivers. */
 #ifdef CONFIG_AC3200		/* Ansel Communications EISA 3200. */
 	&& ac3200_probe(dev)
@@ -326,9 +335,12 @@ static struct device eth3_dev = {
     "eth3", 0,0,0,0,0xffe0 /* I/O base*/, 0,0,0,0, &eth4_dev, ethif_probe };
 static struct device eth2_dev = {
     "eth2", 0,0,0,0,0xffe0 /* I/O base*/, 0,0,0,0, &eth3_dev, ethif_probe };
-static struct device eth1_dev = {
-    "eth1", 0,0,0,0,0xffe0 /* I/O base*/, 0,0,0,0, &eth2_dev, ethif_probe };
 
+/* COBALT LOCAL: We can probe all cards at boot time, this ain't no
+ *               stinking buggy ISA PeeCee box.  -DaveM
+ */
+static struct device eth1_dev = {
+    "eth1", 0,0,0,0,ETH0_ADDR, ETH0_IRQ, 0, 0, 0, &eth2_dev, ethif_probe };
 static struct device eth0_dev = {
     "eth0", 0, 0, 0, 0, ETH0_ADDR, ETH0_IRQ, 0, 0, 0, &eth1_dev, ethif_probe };
 

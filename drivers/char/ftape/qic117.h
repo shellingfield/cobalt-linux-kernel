@@ -19,12 +19,12 @@
  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
  *
- $Source: /home/bas/distr/ftape-2.03b/RCS/qic117.h,v $
- $Author: bas $
+ $Source: /fargo/cvs/linux/drivers/char/ftape/qic117.h,v $
+ $Author: davem $
  *
- $Revision: 1.27 $
- $Date: 1995/05/01 19:02:20 $
- $State: Beta $
+ $Revision: 1.1.1.1 $
+ $Date: 1997/10/27 22:43:42 $
+ $State: Exp $
  *
  *      This file contains QIC-117 spec. related definitions
  *      for the QIC-40/80 floppy-tape driver for Linux.

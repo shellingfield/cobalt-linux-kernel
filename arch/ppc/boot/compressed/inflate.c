@@ -9,7 +9,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$Id: inflate.c,v 0.10 1993/02/04 13:21:06 jloup Exp $";
+static char rcsid[] = "$Id: inflate.c,v 1.1.1.1 1997/10/27 22:44:06 davem Exp $";
 #endif
 
 #include "gzip.h"

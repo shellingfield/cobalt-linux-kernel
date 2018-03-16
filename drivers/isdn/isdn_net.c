@@ -1,4 +1,4 @@
-/* $Id: isdn_net.c,v 1.47 1997/06/21 10:52:05 fritz Exp $
+/* $Id: isdn_net.c,v 1.3 1998/06/13 11:00:17 davem Exp $
 
  * Linux ISDN subsystem, network interfaces and related functions (linklevel).
  *
@@ -21,6 +21,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * $Log: isdn_net.c,v $
+ * Revision 1.3  1998/06/13 11:00:17  davem
+ * Merge to 2.0.34
+ *
+ * Revision 1.2  1997/11/29 02:01:37  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.47  1997/06/21 10:52:05  fritz
  * Removed wrong SET_SKB_FREE in isdn_net_send_skb()
  *
@@ -218,7 +224,7 @@ static int isdn_net_start_xmit(struct sk_buff *, struct device *);
 static int isdn_net_xmit(struct device *, isdn_net_local *, struct sk_buff *);
 static void dev_purge_queues(struct device *dev);	/* move this to net/core/dev.c */
 
-char *isdn_net_revision = "$Revision: 1.47 $";
+char *isdn_net_revision = "$Revision: 1.3 $";
 
  /*
   * Code for raw-networking over ISDN

@@ -1,10 +1,13 @@
-/* $Id: config.c,v 1.15 1997/04/06 22:57:24 keil Exp $
+/* $Id: config.c,v 1.1 1997/11/29 02:01:33 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
  *
  *
  * $Log: config.c,v $
+ * Revision 1.1  1997/11/29 02:01:33  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.15  1997/04/06 22:57:24  keil
  * Hisax version 2.1
  *

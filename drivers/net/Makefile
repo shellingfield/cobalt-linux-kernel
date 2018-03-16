@@ -164,6 +164,15 @@ else
   endif
 endif
 
+ifeq ($(CONFIG_EEXPRESS_PRO100B),y)
+L_OBJS += eepro100.o
+else
+  ifeq ($(CONFIG_EEXPRESS_PRO100B),m)
+  M_OBJS += eepro100.o
+  endif
+endif
+
+
 ifeq ($(CONFIG_PLIP),y)
 L_OBJS += plip.o
 else
@@ -183,7 +192,7 @@ else
 endif
 
 ifdef CONFIG_PPP
-  M_OBJS += bsd_comp.o
+  M_OBJS += bsd_comp.o ppp_deflate.o
 endif
 
 ifeq ($(CONFIG_SLIP),y)
@@ -329,56 +338,6 @@ else
   endif
 endif
 
-ifeq ($(CONFIG_EEXPRESS_PRO100B),y)
-L_OBJS += eepro100.o
-else
-  ifeq ($(CONFIG_EEXPRESS_PRO100B),m)
-  M_OBJS += eepro100.o
-  endif
-endif
-
-ifeq ($(CONFIG_EPIC),y)
-L_OBJS += epic100.o
-else
-  ifeq ($(CONFIG_EPIC),m)
-  M_OBJS += epic100.o
-  endif
-endif
-
-ifeq ($(CONFIG_NE2K_PCI),y)
-L_OBJS += ne2k-pci.o
-CONFIG_8390_BUILTIN = y
-else
-  ifeq ($(CONFIG_NE2K_PCI),m)
-  CONFIG_8390_MODULE = y
-  M_OBJS += ne2k-pci.o
-  endif
-endif
-
-ifeq ($(CONFIG_PCNET32),y)
-L_OBJS += pcnet32.o
-else
-  ifeq ($(CONFIG_PCNET32),m)
-  M_OBJS += pcnet32.o
-  endif
-endif
-
-ifeq ($(CONFIG_RTL8139),y)
-L_OBJS += rtl8139.o
-else
-  ifeq ($(CONFIG_RTL8139),m)
-  M_OBJS += rtl8139.o
-  endif
-endif
-
-ifeq ($(CONFIG_YELLOWFIN),y)
-L_OBJS += yellowfin.o
-else
-  ifeq ($(CONFIG_YELLOWFIN),m)
-  M_OBJS += yellowfin.o
-  endif
-endif
-
 ifeq ($(CONFIG_WAVELAN),y)
 L_OBJS += wavelan.o
 else
@@ -485,6 +444,38 @@ else
   endif
 endif
 
+ifeq ($(CONFIG_COBALT_TULIP),y)
+L_OBJS += cobalttulip.o
+else
+  ifeq ($(CONFIG_COBALT_TULIP),m)
+  M_OBJS += cobalttulip.o
+  endif
+endif
+
+ifeq ($(CONFIG_COBALT_TULIP_RAQ),y)
+L_OBJS += cobalttulip_raq.o
+else
+  ifeq ($(CONFIG_COBALT_TULIP_RAQ),m)
+  M_OBJS += cobalttulip_raq.o
+  endif
+endif
+
+ifeq ($(CONFIG_COBALT_3COM),y)
+L_OBJS += cobalt3com.o
+else
+  ifeq ($(CONFIG_COBALT_3COM),m)
+  M_OBJS += cobalt3com.o
+  endif
+endif
+
+ifeq ($(CONFIG_COBALT_E100),y)
+L_OBJS += cobalte100.o
+else
+  ifeq ($(CONFIG_COBALT_E100),m)
+  M_OBJS += cobalte100.o
+  endif
+endif
+
 ifeq ($(CONFIG_ARCNET),y)
 L_OBJS += arcnet.o
 else
@@ -519,6 +510,47 @@ else
   endif
 endif
 
+ifeq ($(CONFIG_EPIC),y)
+L_OBJS += epic100.o
+else
+  ifeq ($(CONFIG_EPIC),m)
+  M_OBJS += epic100.o
+  endif
+endif
+
+ifeq ($(CONFIG_NE2K_PCI),y)
+L_OBJS += ne2k-pci.o
+CONFIG_8390_BUILTIN = y
+else
+  ifeq ($(CONFIG_NE2K_PCI),m)
+  CONFIG_8390_MODULE = y
+  M_OBJS += ne2k-pci.o
+  endif
+endif
+
+ifeq ($(CONFIG_PCNET32),y)
+L_OBJS += pcnet32.o
+else
+  ifeq ($(CONFIG_PCNET32),m)
+  M_OBJS += pcnet32.o
+  endif
+endif
+
+ifeq ($(CONFIG_RTL8139),y)
+L_OBJS += rtl8139.o
+else
+  ifeq ($(CONFIG_RTL8139),m)
+  M_OBJS += rtl8139.o
+  endif
+endif
+
+ifeq ($(CONFIG_YELLOWFIN),y)
+L_OBJS += yellowfin.o
+else
+  ifeq ($(CONFIG_YELLOWFIN),m)
+  M_OBJS += yellowfin.o
+  endif
+endif
 
 # If anything built-in uses the 8390, then build it into the kernel also.
 # If not, but a module uses it, build as a module.

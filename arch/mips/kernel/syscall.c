@@ -5,25 +5,36 @@
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 1995 by Ralf Baechle
+ * Copyright (C) 1995, 1996 by Ralf Baechle
+ *
+ * TODO:  Implement the compatibility syscalls.
+ *        Don't waste that much memory for empty entries in the syscall
+ *        table.
+ *
+ * $Id: syscall.c,v 1.4 1998/02/16 22:03:35 davem Exp $
  */
+
+#include <linux/config.h>
 #include <linux/linkage.h>
 #include <linux/mm.h>
+#include <linux/smp.h>
+#include <linux/smp_lock.h>
 #include <linux/mman.h>
 #include <linux/sched.h>
+#include <linux/utsname.h>
 #include <linux/unistd.h>
+#include <asm/branch.h>
 #include <asm/ptrace.h>
-#include <asm/segment.h>
 #include <asm/signal.h>
+#include <asm/segment.h>
+#include <asm/page.h>
+#include <asm/pgtable.h>
 
-extern asmlinkage void syscall_trace(void);
 typedef asmlinkage int (*syscall_t)(void *a0,...);
-extern asmlinkage int do_syscalls(struct pt_regs *regs, syscall_t fun,
-                                  int narg);
 extern syscall_t sys_call_table[];
 extern unsigned char sys_narg_table[];
 
-asmlinkage int sys_pipe(struct pt_regs *regs)
+asmlinkage int sys_pipe(struct pt_regs regs)
 {
 	int fd[2];
 	int error;
@@ -31,91 +42,129 @@ asmlinkage int sys_pipe(struct pt_regs *regs)
 	error = do_pipe(fd);
 	if (error)
 		return error;
-	regs->reg2 = fd[0];
-	regs->reg3 = fd[1];
-	return 0;
+	regs.regs[3] = fd[1];
+	return fd[0];
 }
 
 asmlinkage unsigned long sys_mmap(unsigned long addr, size_t len, int prot,
                                   int flags, int fd, off_t offset)
 {
 	struct file * file = NULL;
+	unsigned long res;
 
-	if (flags & MAP_RENAME) {
+	if (!(flags & MAP_ANONYMOUS)) {
 		if (fd >= NR_OPEN || !(file = current->files->fd[fd]))
 			return -EBADF;
 	}
 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
 
-	return do_mmap(file, addr, len, prot, flags, offset);
+	res = do_mmap(file, addr, len, prot, flags, offset);
+
+	return res;
 }
 
 asmlinkage int sys_idle(void)
 {
-	if (current->pid != 0)
-		return -EPERM;
+        int ret = -EPERM;
 
+	if (current->pid != 0)
+		goto out;
 	/* endless idle loop with no priority at all */
+	current->priority = -100;
 	current->counter = -100;
 	for (;;) {
 		/*
-		 * R4[26]00 have wait, R4[04]00 don't.
+		 * R4[36]00 have wait, R4[04]00 don't.
+		 * FIXME: We should save power by reducing the clock where
+		 *        possible.  Thiss will cut down the power consuption
+		 *        of R4200 systems to about 1/16th of normal, the
+		 *        same for logic clocked with the processor generated
+		 *        clocks.
 		 */
 		if (wait_available && !need_resched)
 			__asm__(".set\tmips3\n\t"
+				"nop\n\t"
+				"nop\n\t"
 				"wait\n\t"
-				".set\tmips0\n\t");
+				"nop\n\t"
+				"nop\n\t"
+				".set\tmips0");
+		run_task_queue(&tq_scheduler);
 		schedule();
+
+		/* Free up page table caches when they become too large. */
+
+#define PGTCACHE_HIGH_WATER		50
+#define PGTCACHE_LOW_WATER		25
+
+		if(pgtable_cache_size > PGTCACHE_LOW_WATER) {
+			do {	if(pgd_quicklist)
+					free_page((unsigned long) get_pgd_fast());
+				if(pte_quicklist)
+					free_page((unsigned long) get_pte_fast());
+			} while(pgtable_cache_size > PGTCACHE_HIGH_WATER);
+		}
+
+#undef PGTCACHE_HIGH_WATER
+#undef PGTCACHE_LOW_WATER
+
 	}
+out:
+	return ret;
 }
 
-asmlinkage int sys_fork(struct pt_regs *regs)
+asmlinkage int sys_fork(struct pt_regs regs)
 {
-	return do_fork(SIGCHLD, regs->reg29, regs);
+	return do_fork(SIGCHLD, regs.regs[29], &regs);
 }
 
-asmlinkage int sys_clone(struct pt_regs *regs)
+asmlinkage int sys_clone(struct pt_regs regs)
 {
 	unsigned long clone_flags;
 	unsigned long newsp;
+	int res;
 
-	clone_flags = regs->reg4;
-	newsp = regs->reg5;
+	clone_flags = regs.regs[4];
+	newsp = regs.regs[5];
 	if (!newsp)
-		newsp = regs->reg29;
-	return do_fork(clone_flags, newsp, regs);
+		newsp = regs.regs[29];
+	res = do_fork(clone_flags, newsp, &regs);
+	return res;
 }
 
 /*
  * sys_execve() executes a new program.
  */
-asmlinkage int sys_execve(struct pt_regs *regs)
+asmlinkage int sys_execve(struct pt_regs regs)
 {
 	int error;
 	char * filename;
 
-	error = getname((char *) regs->reg4, &filename);
+	error = getname((char *) (long)regs.regs[4], &filename);
 	if (error)
 		return error;
-	error = do_execve(filename, (char **) regs->reg5,
-	                  (char **) regs->reg6, regs);
+	error = do_execve(filename, (char **) (long)regs.regs[5],
+	                  (char **) (long)regs.regs[6], &regs);
 	putname(filename);
 	return error;
 }
 
 /*
  * Do the indirect syscall syscall.
+ * XXX
  */
-asmlinkage int sys_syscall(unsigned long a0, unsigned long a1, unsigned long a2,
-                           unsigned long a3, unsigned long a4, unsigned long a5,
-                           unsigned long a6)
+asmlinkage int sys_syscall(struct pt_regs regs)
 {
 	syscall_t syscall;
+	unsigned long syscallnr = regs.regs[4];
+	unsigned long a0, a1, a2, a3, a4, a5, a6;
+	int nargs, errno;
 
-	if (a0 > __NR_Linux + __NR_Linux_syscalls)
+	if (syscallnr > __NR_Linux + __NR_Linux_syscalls)
 		return -ENOSYS;
 
-	syscall = sys_call_table[a0];
+	syscall = sys_call_table[syscallnr];
+	nargs = sys_narg_table[syscallnr];
 	/*
 	 * Prevent stack overflow by recursive
 	 * syscall(__NR_syscall, __NR_syscall,...);
@@ -126,100 +175,57 @@ asmlinkage int sys_syscall(unsigned long a0, unsigned long a1, unsigned long a2,
 	if (syscall == NULL)
 		return -ENOSYS;
 
+	if (nargs > 3) {
+		unsigned long usp = regs.regs[29];
+		unsigned long *sp = (unsigned long *) usp;
+		if (usp & 3) {
+			printk("unaligned usp -EFAULT\n");
+			force_sig(SIGSEGV, current);
+			return -EFAULT;
+		}
+		errno = verify_area(VERIFY_READ, (void *) (usp + 16),
+		                    (nargs - 3) * sizeof(unsigned long));
+		if(errno)
+			return -EFAULT;
+		switch(nargs) {
+		case 7:
+			a3 = sp[4]; a4 = sp[5]; a5 = sp[6]; a6 = sp[7];
+			break;
+		case 6:
+			a3 = sp[4]; a4 = sp[5]; a5 = sp[6]; a6 = 0;
+			break;
+		case 5:
+			a3 = sp[4]; a4 = sp[5]; a5 = a6 = 0;
+			break;
+		case 4:
+			a3 = sp[4]; a4 = a5 = a6 = 0;
+			break;
+
+		default:
+			a3 = a4 = a5 = a6 = 0;
+			break;
+		}
+	} else {
+		a3 = a4 = a5 = a6 = 0;
+	}
+	a0 = regs.regs[5]; a1 = regs.regs[6]; a2 = regs.regs[7];
 	return syscall((void *)a0, a1, a2, a3, a4, a5, a6);
 }
 
-void do_sys(struct pt_regs *regs)
-{
-	unsigned long syscallnr, usp;
-	syscall_t syscall;
-	int errno, narg;
 
-	/*
-	 * Compute the return address;
-	 */
-	if (regs->cp0_cause & CAUSEF_BD)
-	{
-		/*
-		 * This syscall is in a branch delay slot.  Since we don't do
-		 * branch delay slot handling we would get a process trying
-		 * to do syscalls ever and ever again.  So better zap it.
-		 */
-		printk("%s: syscall in branch delay slot.\n", current->comm);
-		current->sig->action[SIGILL-1].sa_handler = NULL;
-		current->blocked &= ~(1<<(SIGILL-1));
-		send_sig(SIGILL, current, 1);
-		return;
-	}
-	regs->cp0_epc += 4;
+/*
+ * Build the string table for the builtin "poor man's strace".
+ */
+#ifdef CONF_PRINT_SYSCALLS
+#define SYS(fun, narg) #fun,
+static char *sfnames[] = {
+#include "syscalls.h"
+};
+#endif
 
-	syscallnr = regs->reg2;
-	if (syscallnr > (__NR_Linux + __NR_Linux_syscalls))
-		goto illegal_syscall;
-
-	syscall = sys_call_table[syscallnr];
-	if (syscall == NULL)
-		goto illegal_syscall;
-
-	narg = sys_narg_table[syscallnr];
-	if (narg > 4)
-	{
-		/*
-		 * Verify that we can safely get the additional parameters
-		 * from the user stack.  Of course I could read the params
-		 * from unaligned addresses ...  Consider this a programming
-		 * course caliber .45.
-		 */
-		usp = regs->reg29;
-		if (usp & 3)
-		{
-			printk("unaligned usp\n");
-			send_sig(SIGSEGV, current, 1);
-			regs->reg2 = EFAULT;
-			regs->reg7 = 1;
-			return;
-		}
-		errno = verify_area(VERIFY_READ, (void *) (usp + 16),
-		                    (narg - 4) * sizeof(unsigned long));
-		if (errno < 0)
-			goto bad_syscall;
-	}
-
-	if ((current->flags & PF_TRACESYS) == 0)
-	{
-		errno = do_syscalls(regs, syscall, narg);
-		if (errno < 0 || current->errno)
-			goto bad_syscall;
-
-		regs->reg2 = errno;
-		regs->reg7 = 0;
-	}
-	else
-	{
-		syscall_trace();
-
-		errno = do_syscalls(regs, syscall, narg);
-		if (errno < 0 || current->errno)
-		{
-			regs->reg2 = -errno;
-			regs->reg7 = 1;
-		}
-		else
-		{
-			regs->reg2 = errno;
-			regs->reg7 = 0;
-		}
-
-		syscall_trace();
-	}
-	return;
-
-bad_syscall:
-	regs->reg2 = -errno;
-	regs->reg7 = 1;
-	return;
-illegal_syscall:
-	regs->reg2 = ENOSYS;
-	regs->reg7 = 1;
-	return;
-}
+#if defined(CONFIG_BINFMT_IRIX) && defined(CONF_DEBUG_IRIX)
+#define SYS(fun, narg) #fun,
+static char *irix_sys_names[] = {
+#include "irix5sys.h"
+};
+#endif

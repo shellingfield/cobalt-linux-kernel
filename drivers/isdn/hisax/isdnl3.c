@@ -1,4 +1,4 @@
-/* $Id: isdnl3.c,v 1.10 1997/04/06 22:54:16 keil Exp $
+/* $Id: isdnl3.c,v 1.1 1997/11/29 02:01:34 davem Exp $
 
  * Author       Karsten Keil (keil@temic-ech.spacenet.de)
  *              based on the teles driver from Jan den Ouden
@@ -7,6 +7,9 @@
  *              Fritz Elfert
  *
  * $Log: isdnl3.c,v $
+ * Revision 1.1  1997/11/29 02:01:34  davem
+ * Merge to 2.0.32
+ *
  * Revision 1.10  1997/04/06 22:54:16  keil
  * Using SKB's
  *
@@ -46,7 +49,7 @@
 #include "isdnl3.h"
 #include <linux/config.h>
 
-const char *l3_revision = "$Revision: 1.10 $";
+const char *l3_revision = "$Revision: 1.1 $";
 
 void
 l3_debug(struct PStack *st, char *s)
